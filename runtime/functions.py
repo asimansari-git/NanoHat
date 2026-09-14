@@ -1,11 +1,10 @@
-"""
-functions.py — Execution logic for fuge-nanohat tools.
-Starting with the safe AST-based calculator and system health check.
-"""
-
 import ast
 import operator
 import math
+import os
+import sys
+import shutil
+import subprocess
 import psutil
 
 _SAFE_OPERATORS = {
@@ -56,6 +55,11 @@ def _eval_ast(node):
         raise ValueError(f"Unsupported AST node: {type(node).__name__}")
 
 
+def check_interactive_tty() -> bool:
+    """Returns True if running in an interactive TTY or auto-approved via env var."""
+    return sys.stdin.isatty() or os.environ.get("NANOHAT_AUTO_APPROVE_DESTRUCTIVE") == "1"
+
+
 def calculator(expression: str) -> str:
     """Safely evaluates a mathematical expression using AST parsing."""
     try:
@@ -69,30 +73,71 @@ def calculator(expression: str) -> str:
         return f"Error: {e}"
 
 
-def system_health() -> str:
+def system_health(metric: str = "all") -> str:
     """Returns current system health: CPU percent, RAM usage, and battery."""
     try:
+        metric_norm = (metric or "all").strip().lower()
+
         cpu = psutil.cpu_percent(interval=0.1)
         mem = psutil.virtual_memory()
         ram_used_gb = round(mem.used / (1024 ** 3), 2)
         ram_total_gb = round(mem.total / (1024 ** 3), 2)
         ram_pct = mem.percent
-        
-        battery_str = "N/A"
-        try:
-            batt = psutil.sensors_battery()
-            if batt:
-                battery_str = f"{batt.percent}% ({'charging' if batt.power_plugged else 'discharging'})"
-        except Exception:
-            pass
 
-        return f"CPU: {cpu}% | RAM: {ram_used_gb}GB / {ram_total_gb}GB ({ram_pct}%) | Battery: {battery_str}"
+        batt = psutil.sensors_battery()
+        if batt:
+            batt_pct = int(round(batt.percent))
+            state = "charging" if batt.power_plugged else "discharging"
+            batt_str = f"{batt_pct}% ({state})"
+        else:
+            batt_str = "No battery detected"
+
+        if "batt" in metric_norm:
+            return f"Battery: {batt_str}"
+        elif "cpu" in metric_norm:
+            return f"CPU: {cpu}%"
+        elif "ram" in metric_norm or "mem" in metric_norm:
+            return f"RAM: {ram_used_gb}GB / {ram_total_gb}GB ({ram_pct}%)"
+        else:
+            return f"CPU: {cpu}% | RAM: {ram_used_gb}GB / {ram_total_gb}GB ({ram_pct}%) | Battery: {batt_str}"
     except Exception as e:
         return f"Error querying system health: {e}"
+
+
+VALID_POWER_PROFILES = {"power-saver", "balanced", "performance"}
+
+
+def power_profile(action: str = "get", profile: str = None) -> str:
+    """Gets or sets the Linux system power profile via powerprofilesctl."""
+    binary = shutil.which("powerprofilesctl")
+    if not binary:
+        return "Error: powerprofilesctl is not installed on this system."
+
+    action_norm = (action or "get").strip().lower()
+    if action_norm == "get" or (action_norm == "set" and not profile):
+        try:
+            res = subprocess.run([binary, "get"], capture_output=True, text=True, check=True)
+            return f"Current power profile: {res.stdout.strip()}"
+        except subprocess.CalledProcessError as e:
+            return f"Error getting power profile: {e.stderr.strip() or str(e)}"
+
+    elif action_norm == "set":
+        if not profile or profile.strip().lower() not in VALID_POWER_PROFILES:
+            return f"Error: Invalid profile '{profile}'. Choose from: {', '.join(sorted(VALID_POWER_PROFILES))}"
+        target = profile.strip().lower()
+        try:
+            subprocess.run([binary, "set", target], capture_output=True, text=True, check=True)
+            return f"Power profile set to: {target}"
+        except subprocess.CalledProcessError as e:
+            return f"Error setting power profile: {e.stderr.strip() or str(e)}"
+    else:
+        return f"Error: Unsupported action '{action}'. Use 'get' or 'set'."
 
 
 # Tool dispatch registry
 REGISTRY = {
     "calculator": calculator,
     "system_health": system_health,
+    "power_profile": power_profile,
 }
+

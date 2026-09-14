@@ -7,13 +7,13 @@ CALCULATOR_TOOL = {
     "type": "function",
     "function": {
         "name": "calculator",
-        "description": "Perform mathematical calculations, arithmetic, and expressions (e.g. 15 * 800, (45 + 10) / 2, 2**8).",
+        "description": "Perform mathematical calculations, arithmetic, and expressions.",
         "parameters": {
             "type": "object",
             "properties": {
                 "expression": {
                     "type": "string",
-                    "description": "The mathematical expression to evaluate, e.g. '15 * 800' or '2 ** 10'."
+                    "description": "The mathematical expression to evaluate."
                 }
             },
             "required": ["expression"]
@@ -25,17 +25,47 @@ SYSTEM_HEALTH_TOOL = {
     "type": "function",
     "function": {
         "name": "system_health",
-        "description": "Get current Linux system metrics including CPU utilization, RAM usage, and battery state.",
+        "description": "Check Linux operating system metrics: battery status, battery level, CPU utilization, and RAM usage.",
         "parameters": {
             "type": "object",
-            "properties": {},
+            "properties": {
+                "metric": {
+                    "type": "string",
+                    "description": "Optional specific metric: 'battery', 'cpu', 'ram', or 'all'. Defaults to 'all'."
+                }
+            },
             "required": []
         }
     }
 }
 
+POWER_PROFILE_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "power_profile",
+        "description": "Get or set the Linux system power profile (power-saver, balanced, performance) using powerprofilesctl.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "description": "Action: 'get' to view the active power profile, or 'set' to change it. Defaults to 'get'."
+                },
+                "profile": {
+                    "type": "string",
+                    "description": "Target profile when action is 'set': 'power-saver', 'balanced', or 'performance'."
+                }
+            },
+            "required": ["action"]
+        }
+    }
+}
+
+
 # Master tools catalog
 ALL_TOOLS = [
     CALCULATOR_TOOL,
-    SYSTEM_HEALTH_TOOL
+    SYSTEM_HEALTH_TOOL,
+    POWER_PROFILE_TOOL
 ]
+
