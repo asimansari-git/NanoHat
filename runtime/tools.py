@@ -61,11 +61,39 @@ POWER_PROFILE_TOOL = {
     }
 }
 
+GET_DATETIME_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "get_datetime",
+        "description": "Get current system date, time, day of the week, and timezone on Linux.",
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    }
+}
+
+EMPTY_TRASH_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "empty_trash",
+        "description": "Permanently empty and clear the user trash bin on Linux. Requires user confirmation.",
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    }
+}
 
 # Master tools catalog
 ALL_TOOLS = [
     CALCULATOR_TOOL,
     SYSTEM_HEALTH_TOOL,
-    POWER_PROFILE_TOOL
+    POWER_PROFILE_TOOL,
+    GET_DATETIME_TOOL,
+    EMPTY_TRASH_TOOL
 ]
+
 

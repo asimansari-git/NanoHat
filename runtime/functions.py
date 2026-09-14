@@ -5,6 +5,7 @@ import os
 import sys
 import shutil
 import subprocess
+from datetime import datetime
 import psutil
 
 _SAFE_OPERATORS = {
@@ -134,10 +135,50 @@ def power_profile(action: str = "get", profile: str = None) -> str:
         return f"Error: Unsupported action '{action}'. Use 'get' or 'set'."
 
 
+def get_datetime() -> str:
+    """Returns current system date, time, day of week, and timezone."""
+    now = datetime.now().astimezone()
+    return now.strftime("%A, %B %d, %Y, %I:%M:%S %p %Z")
+
+
+def empty_trash() -> str:
+    """Permanently empties the user trash bin using gio trash --empty.
+    Guarded by interactive TTY check to prevent headless hangs.
+    """
+    gio_bin = shutil.which("gio")
+    if not gio_bin:
+        return "Error: gio binary not found on this system."
+
+    if not check_interactive_tty():
+        return "ERROR[aborted]: Destructive action 'empty_trash' requires an interactive TTY or NANOHAT_AUTO_APPROVE_DESTRUCTIVE=1."
+
+    if os.environ.get("NANOHAT_AUTO_APPROVE_DESTRUCTIVE") == "1":
+        try:
+            subprocess.run([gio_bin, "trash", "--empty"], capture_output=True, text=True, check=True)
+            return "Trash emptied successfully (auto-approved)."
+        except subprocess.CalledProcessError as e:
+            return f"Error emptying trash: {e.stderr.strip() or str(e)}"
+
+    try:
+        confirm = input("Permanently delete all items in trash? [y/N]: ").strip().lower()
+        if confirm in {"y", "yes"}:
+            subprocess.run([gio_bin, "trash", "--empty"], capture_output=True, text=True, check=True)
+            return "Trash emptied successfully."
+        else:
+            return "Trash emptying cancelled by user."
+    except (EOFError, KeyboardInterrupt):
+        return "Trash emptying aborted."
+    except subprocess.CalledProcessError as e:
+        return f"Error emptying trash: {e.stderr.strip() or str(e)}"
+
+
 # Tool dispatch registry
 REGISTRY = {
     "calculator": calculator,
     "system_health": system_health,
     "power_profile": power_profile,
+    "get_datetime": get_datetime,
+    "empty_trash": empty_trash,
 }
+
 

@@ -10,6 +10,8 @@ PROMPTS = {
         "- Use calculator for all mathematical and arithmetic queries (e.g. 7+7, 7+7*18, addition, subtraction, multiplication).\n"
         "- Use system_health to check CPU, RAM, and battery metrics (battery level, battery status, battery health).\n"
         "- Use power_profile to inspect ('get') or switch ('set') power profiles.\n"
+        "- Use get_datetime for date and time queries (today's date, current time, day of week, timezone).\n"
+        "- Use empty_trash to permanently empty or clear the Linux trash bin.\n"
         "Always invoke the appropriate tool."
     ),
     "v2": (
@@ -18,6 +20,8 @@ PROMPTS = {
         "- Use calculator for all mathematical and arithmetic queries (e.g. 7+7, 7+7*18, addition, subtraction, multiplication).\n"
         "- Use system_health to check CPU, RAM, and battery metrics (battery level, battery status, battery health).\n"
         "- Use power_profile to inspect ('get') or switch ('set') power profiles.\n"
+        "- Use get_datetime for date and time queries (today's date, current time, day of week, timezone).\n"
+        "- Use empty_trash to permanently empty or clear the Linux trash bin.\n"
         "Always invoke the appropriate tool."
     )
 }
