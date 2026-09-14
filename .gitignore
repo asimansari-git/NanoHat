@@ -60,3 +60,7 @@ screenshot.png
 *.log
 grounding/*.json
 dataset/
+
+# Obsidian Vault / Task Planning Artifacts
+.notes/
+
