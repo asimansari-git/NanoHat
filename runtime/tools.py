@@ -7,13 +7,13 @@ CALCULATOR_TOOL = {
     "type": "function",
     "function": {
         "name": "calculator",
-        "description": "Perform mathematical calculations, arithmetic, and expressions.",
+        "description": "Perform mathematical calculations and arithmetic expressions.",
         "parameters": {
             "type": "object",
             "properties": {
                 "expression": {
                     "type": "string",
-                    "description": "The mathematical expression to evaluate."
+                    "description": "The exact mathematical expression to evaluate (e.g. 7+7*18)."
                 }
             },
             "required": ["expression"]
@@ -87,13 +87,90 @@ EMPTY_TRASH_TOOL = {
     }
 }
 
+TOGGLE_WIFI_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "toggle_wifi",
+        "description": "Manage Wi-Fi radio power: turn on, turn off, toggle, or query Wi-Fi state.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "state": {
+                    "type": "string",
+                    "description": "Desired action: 'status', 'on', 'off', or 'toggle'. Defaults to 'status'."
+                }
+            },
+            "required": []
+        }
+    }
+}
+
+TOGGLE_BLUETOOTH_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "toggle_bluetooth",
+        "description": "Manage Bluetooth radio power: turn on, turn off, toggle, or query Bluetooth state.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "state": {
+                    "type": "string",
+                    "description": "Desired action: 'status', 'on', 'off', or 'toggle'. Defaults to 'status'."
+                }
+            },
+            "required": []
+        }
+    }
+}
+
+SERVICE_STATUS_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "service_status",
+        "description": "Check the status or running state of a service, daemon, or program (e.g. ollama, pipewire).",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "service_name": {
+                    "type": "string",
+                    "description": "Name of the service or program to check (e.g. ollama, pipewire)."
+                }
+            },
+            "required": ["service_name"]
+        }
+    }
+}
+
+RESTART_SERVICE_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "restart_service",
+        "description": "Restart an allowlisted systemd user service (pipewire, wireplumber, xdg-desktop-portal, ollama).",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "service_name": {
+                    "type": "string",
+                    "description": "Name of the service to restart (e.g. pipewire, wireplumber)."
+                }
+            },
+            "required": ["service_name"]
+        }
+    }
+}
+
 # Master tools catalog
 ALL_TOOLS = [
     CALCULATOR_TOOL,
     SYSTEM_HEALTH_TOOL,
     POWER_PROFILE_TOOL,
     GET_DATETIME_TOOL,
-    EMPTY_TRASH_TOOL
+    EMPTY_TRASH_TOOL,
+    TOGGLE_WIFI_TOOL,
+    TOGGLE_BLUETOOTH_TOOL,
+    SERVICE_STATUS_TOOL,
+    RESTART_SERVICE_TOOL
 ]
+
 
 

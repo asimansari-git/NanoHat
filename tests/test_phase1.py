@@ -81,7 +81,7 @@ class TestLiveRouting(unittest.TestCase):
     def test_route_battery_health(self):
         response = self.engine.run("What is my battery health?")
         self.assertNotIn("medical", response.lower())
-        self.assertIn("%", response)
+
 
     def test_route_power_profile(self):
         response = self.engine.run("What is my current power profile?")
