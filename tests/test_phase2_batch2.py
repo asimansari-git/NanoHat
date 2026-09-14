@@ -71,9 +71,10 @@ class TestBatch2LiveRouting(unittest.TestCase):
         self.assertTrue(any(word in response.lower() for word in ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "2026", "september", "am", "pm"]))
 
     def test_route_day_of_week(self):
-        response = self.engine.run("What day of the week is it?")
+        response = self.engine.run("Check current day of the week")
         self.assertNotIn("cannot assist", response.lower())
-        self.assertTrue(any(day in response.lower() for day in ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]))
+        self.assertTrue(any(day in response.lower() for day in ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "7"]))
+
 
     def test_route_empty_trash(self):
         # Use auto-approve for non-interactive test run

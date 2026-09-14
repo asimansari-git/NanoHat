@@ -172,13 +172,170 @@ def empty_trash() -> str:
         return f"Error emptying trash: {e.stderr.strip() or str(e)}"
 
 
-# Tool dispatch registry
+def toggle_wifi(state: str = None, action: str = None) -> str:
+    """Checks Wi-Fi status, turns Wi-Fi on or off, or toggles connection via nmcli."""
+    target = (state or action or "status").strip().lower()
+    nmcli_bin = shutil.which("nmcli")
+    if not nmcli_bin:
+        return "Error: nmcli binary not found on this system."
+
+    if target in {"status", "check", "get"}:
+        res = subprocess.run([nmcli_bin, "radio", "wifi"], capture_output=True, text=True)
+        return f"Wi-Fi radio is currently: {res.stdout.strip()}"
+    elif target in {"on", "enable", "enabled"}:
+        subprocess.run([nmcli_bin, "radio", "wifi", "on"], capture_output=True, text=True, check=True)
+        return "Wi-Fi radio turned on."
+    elif target in {"off", "disable", "disabled"}:
+        subprocess.run([nmcli_bin, "radio", "wifi", "off"], capture_output=True, text=True, check=True)
+        return "Wi-Fi radio turned off."
+    elif target in {"toggle", "flip"}:
+        res = subprocess.run([nmcli_bin, "radio", "wifi"], capture_output=True, text=True)
+        current = res.stdout.strip()
+        new_state = "off" if current == "enabled" else "on"
+        subprocess.run([nmcli_bin, "radio", "wifi", new_state], capture_output=True, text=True, check=True)
+        return f"Wi-Fi toggled from {current} to {new_state}."
+    else:
+        return f"Error: Unsupported Wi-Fi action '{target}'. Use 'on', 'off', 'toggle', or 'status'."
+
+
+def toggle_bluetooth(state: str = None, action: str = None) -> str:
+    """Checks Bluetooth status, turns Bluetooth on or off, or toggles power via bluetoothctl."""
+    target = (state or action or "status").strip().lower()
+    bt_bin = shutil.which("bluetoothctl")
+    if not bt_bin:
+        return "Error: bluetoothctl binary not found on this system."
+
+    def _is_powered() -> bool:
+        res = subprocess.run([bt_bin, "show"], capture_output=True, text=True)
+        return "Powered: yes" in res.stdout
+
+    if target in {"status", "check", "get"}:
+        powered = _is_powered()
+        return f"Bluetooth is currently: {'powered on' if powered else 'powered off'}"
+    elif target in {"on", "enable", "enabled"}:
+        subprocess.run([bt_bin, "power", "on"], capture_output=True, text=True, check=True)
+        return "Bluetooth powered on."
+    elif target in {"off", "disable", "disabled"}:
+        subprocess.run([bt_bin, "power", "off"], capture_output=True, text=True, check=True)
+        return "Bluetooth powered off."
+    elif target in {"toggle", "flip"}:
+        powered = _is_powered()
+        new_state = "off" if powered else "on"
+        subprocess.run([bt_bin, "power", new_state], capture_output=True, text=True, check=True)
+        return f"Bluetooth toggled from {'on' if powered else 'off'} to {new_state}."
+    else:
+        return f"Error: Unsupported Bluetooth action '{target}'. Use 'on', 'off', 'toggle', or 'status'."
+
+
+def service_status(service_name: str = None, name: str = None) -> str:
+    """Inspects whether a systemd user or system service is active, inactive, or failed."""
+    svc = (service_name or name or "").strip()
+    if not svc:
+        return "Error: Please specify the service name to inspect (e.g. 'pipewire', 'wireplumber')."
+
+    clean = os.path.basename(svc)
+    unit = clean if "." in clean else f"{clean}.service"
+
+    sys_bin = shutil.which("systemctl")
+    if not sys_bin:
+        return "Error: systemctl binary not found on this system."
+
+    # 1. Inspect user scope first
+    res = subprocess.run([sys_bin, "--user", "is-active", unit], capture_output=True, text=True)
+    status = res.stdout.strip()
+    if status == "active":
+        return f"Systemd user service '{unit}' status: active"
+
+    # 2. Inspect system scope (safe read-only)
+    sys_res = subprocess.run([sys_bin, "is-active", unit], capture_output=True, text=True)
+    sys_status = sys_res.stdout.strip()
+    if sys_status == "active":
+        return f"Systemd system service '{unit}' status: active"
+
+    # 3. Check daemon 'd' suffix (e.g. tailscale -> tailscaled.service)
+    if not clean.endswith("d"):
+        d_unit = f"{clean}d.service"
+        d_res = subprocess.run([sys_bin, "is-active", d_unit], capture_output=True, text=True)
+        if d_res.stdout.strip() == "active":
+            return f"Systemd system service '{d_unit}' status: active"
+
+    return f"Systemd service '{unit}' status: {status or sys_status or 'inactive'}"
+
+
+SAFE_RESTART_SERVICES = {
+    "pipewire",
+    "pipewire.service",
+    "pipewire-pulse",
+    "pipewire-pulse.service",
+    "wireplumber",
+    "wireplumber.service",
+    "xdg-desktop-portal",
+    "xdg-desktop-portal.service",
+    "xdg-desktop-portal-gnome",
+    "xdg-desktop-portal-gnome.service",
+    "ollama",
+    "ollama.service",
+}
+
+BLOCKED_WAYLAND_SERVICES = {
+    "gnome-shell",
+    "gnome-shell.service",
+    "org.gnome.shell",
+    "org.gnome.shell@wayland",
+    "gdm",
+    "gdm.service",
+    "wayland",
+}
+
+
+def restart_service(service_name: str = None, name: str = None) -> str:
+    """Restarts an allowlisted systemd user service.
+    Desktop shells and session managers are blocked to protect the Wayland desktop session.
+    """
+    svc = (service_name or name or "").strip().lower()
+    if not svc:
+        return "Error: Please specify the service name to restart (e.g. 'pipewire', 'wireplumber')."
+
+    clean = os.path.basename(svc)
+    if clean in BLOCKED_WAYLAND_SERVICES:
+        return f"ERROR[security_blocked]: Restarting '{clean}' is strictly blocked to prevent Wayland desktop session crashes."
+
+    if clean not in SAFE_RESTART_SERVICES:
+        allowed = ", ".join(sorted(set(s.replace(".service", "") for s in SAFE_RESTART_SERVICES)))
+        return f"ERROR[security_blocked]: Service '{clean}' is not in the safe allowlist. Safe services: {allowed}"
+
+    unit = clean if "." in clean else f"{clean}.service"
+    sys_bin = shutil.which("systemctl")
+    if not sys_bin:
+        return "Error: systemctl binary not found on this system."
+
+    try:
+        subprocess.run([sys_bin, "--user", "restart", unit], capture_output=True, text=True, check=True)
+        return f"Service '{unit}' restarted successfully."
+    except subprocess.CalledProcessError as e:
+        return f"Error restarting service '{unit}': {e.stderr.strip() or str(e)}"
+
+
+# Tool dispatch registry with sub-1B alias mapping
 REGISTRY = {
     "calculator": calculator,
     "system_health": system_health,
     "power_profile": power_profile,
     "get_datetime": get_datetime,
     "empty_trash": empty_trash,
+    "toggle_wifi": toggle_wifi,
+    "toggle_bluetooth": toggle_bluetooth,
+    "service_status": service_status,
+    "restart_service": restart_service,
+    # Direct Aliases to absorb sub-1B model hallucinations
+    "battery_level": system_health,
+    "battery_status": system_health,
+    "batterylevel": system_health,
+    "batterystatus": system_health,
+    "wifi_control": toggle_wifi,
+    "bluetooth_control": toggle_bluetooth,
+    "system_clock": get_datetime,
 }
+
 
 
