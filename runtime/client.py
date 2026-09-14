@@ -18,7 +18,7 @@ class OllamaClient:
         self.model = model
         self.endpoint = f"{self.host}/api/chat"
 
-    def chat(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None, temperature: float = 0.0) -> Dict[str, Any]:
+    def chat(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None, temperature: float = 0.0, timeout: float = 30.0) -> Dict[str, Any]:
         """Send a chat completion request to Ollama with optional tools schema."""
         payload = {
             "model": self.model,
@@ -39,8 +39,9 @@ class OllamaClient:
         )
 
         try:
-            with urllib.request.urlopen(req) as resp:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
                 return result
         except urllib.error.URLError as e:
             raise RuntimeError(f"Failed to communicate with Ollama at {self.endpoint}: {e}")
+
