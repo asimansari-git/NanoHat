@@ -64,7 +64,7 @@ class AgentEngine:
         # Step 2: Check if model emitted tool calls
         if not tool_calls:
             content = message.get("content", "")
-            self._log("DIRECT_RESPONSE", content)
+            self._log("DIRECT_RESPONSE", "Model responded without tool call.")
             return content
 
         # Append assistant message with tool calls
@@ -92,6 +92,6 @@ class AgentEngine:
         self._log("SYNTHESIS", "Sending tool results back to model for final synthesis...")
         final_response = self.client.chat(messages=messages, tools=ALL_TOOLS)
         final_content = final_response.get("message", {}).get("content", "")
-        self._log("FINAL_RESPONSE", final_content)
 
         return final_content
+
