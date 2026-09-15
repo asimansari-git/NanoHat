@@ -99,15 +99,18 @@ def route_tools(query: str, all_tools: List[Dict[str, Any]], max_tools: int = 4)
 
     # 5. Hardware, Power & Health Metrics
     has_cpu_ram = bool(RE_CPU_RAM.search(q))
-    has_metrics = bool(RE_BATTERY_METRICS.search(q))
+    has_battery = bool(re.search(r"\b(battery|charge|batt)\b", q, re.IGNORECASE))
     has_power = bool(RE_POWER_PROFILES.search(q))
-    if has_cpu_ram and not has_power:
+    has_generic_health = bool(re.search(r"\b(health|system\s+health)\b", q, re.IGNORECASE))
+
+    if (has_cpu_ram or has_battery) and not has_power:
         _add("system_health")
-    elif has_power and not has_cpu_ram and not has_metrics:
+    elif has_power and not has_cpu_ram and not has_battery:
         _add("power_profile")
-    elif has_cpu_ram or has_metrics or has_power:
+    elif has_generic_health or has_power or has_battery or has_cpu_ram:
         _add("system_health")
-        _add("power_profile")
+        if has_power:
+            _add("power_profile")
 
     # 6. Trash & Housekeeping
     if RE_TRASH.search(q):

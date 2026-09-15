@@ -25,13 +25,13 @@ SYSTEM_HEALTH_TOOL = {
     "type": "function",
     "function": {
         "name": "system_health",
-        "description": "Check Linux operating system metrics: battery status, battery level, CPU utilization, and RAM usage.",
+        "description": "Check Linux operating system metrics: RAM usage, CPU utilization, or battery status.",
         "parameters": {
             "type": "object",
             "properties": {
                 "metric": {
                     "type": "string",
-                    "description": "Optional specific metric: 'battery', 'cpu', 'ram', or 'all'. Defaults to 'all'."
+                    "description": "Metric to query: 'ram' for RAM or memory usage, 'cpu' for CPU utilization, 'battery' for battery status, or 'all'. Defaults to 'all'."
                 }
             },
             "required": []
@@ -127,13 +127,13 @@ SERVICE_STATUS_TOOL = {
     "type": "function",
     "function": {
         "name": "service_status",
-        "description": "Check the status or running state of a service, daemon, or program (e.g. ollama, pipewire).",
+        "description": "Check the status or running state of a service, daemon, server, or program (e.g. ollama, pipewire, tailscale).",
         "parameters": {
             "type": "object",
             "properties": {
                 "service_name": {
                     "type": "string",
-                    "description": "Name of the service or program to check (e.g. ollama, pipewire)."
+                    "description": "Name of the service, daemon, or server to check (e.g. ollama, pipewire, tailscale)."
                 }
             },
             "required": ["service_name"]

@@ -186,7 +186,8 @@ def toggle_wifi(state: str = None, action: str = None) -> str:
 
     if target in {"status", "check", "get"}:
         res = subprocess.run([nmcli_bin, "radio", "wifi"], capture_output=True, text=True)
-        return f"Wi-Fi radio is currently: {res.stdout.strip()}"
+        enabled = res.stdout.strip() == "enabled"
+        return "Yes, Wi-Fi radio is enabled." if enabled else "No, Wi-Fi radio is disabled."
     elif target in {"on", "enable", "enabled"}:
         subprocess.run([nmcli_bin, "radio", "wifi", "on"], capture_output=True, text=True, check=True)
         return "Wi-Fi radio turned on."
@@ -216,7 +217,7 @@ def toggle_bluetooth(state: str = None, action: str = None) -> str:
 
     if target in {"status", "check", "get"}:
         powered = _is_powered()
-        return f"Bluetooth is currently: {'powered on' if powered else 'powered off'}"
+        return "Yes, Bluetooth is powered on." if powered else "No, Bluetooth is powered off."
     elif target in {"on", "enable", "enabled"}:
         subprocess.run([bt_bin, "power", "on"], capture_output=True, text=True, check=True)
         return "Bluetooth powered on."
