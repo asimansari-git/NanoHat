@@ -9,17 +9,19 @@ from typing import List, Dict, Any
 
 # Compiled regex patterns for intent clusters
 RE_DATETIME = re.compile(r"\b(time|date|today|clock|hour|minute|day|month|year|timezone|now)\b", re.IGNORECASE)
-RE_SERVICE_EXPLICIT = re.compile(r"\b(service|systemd|daemon|unit)\b", re.IGNORECASE)
-RE_SERVICE_ACTION = re.compile(r"\b(status of|is|check|restart|reload)\s+([a-zA-Z0-9_\-\.]+)\b", re.IGNORECASE)
+RE_SERVICE_EXPLICIT = re.compile(r"\b(service|services|systemd|daemon|daemons|server|servers|process|processes|unit|units)\b", re.IGNORECASE)
+RE_SERVICE_ACTION = re.compile(r"\b(status of|state of|is|check|restart|reload)\s+([a-zA-Z0-9_\-\.]+)\b", re.IGNORECASE)
 RE_NETWORK = re.compile(r"\b(wifi|wi-fi|bluetooth|bt|radio|ssid|network)\b", re.IGNORECASE)
-RE_BATTERY_METRICS = re.compile(r"\b(battery|cpu|ram|memory|health|charge)\b", re.IGNORECASE)
-RE_POWER_PROFILES = re.compile(r"\b(power|profile|saver|performance)\b", re.IGNORECASE)
+RE_BATTERY_METRICS = re.compile(r"\b(battery|charge|health)\b", re.IGNORECASE)
+RE_CPU_RAM = re.compile(r"\b(cpu|ram|swap|load|core|cores|memory\s+usage|memory\s+status)\b", re.IGNORECASE)
+RE_POWER_PROFILES = re.compile(r"\b(power|profile|profiles|saver|performance)\b", re.IGNORECASE)
 RE_TRASH = re.compile(r"\b(trash|recycle|empty\s+trash|clear\s+trash|bin)\b", re.IGNORECASE)
 RE_MATH_WORDS = re.compile(r"\b(calculate|calc|math|arithmetic|eval|evaluate)\b", re.IGNORECASE)
 RE_MATH_EXPR = re.compile(r"\d+\s*[\+\-\*\/]\s*\d+")
 RE_RAM_WORDS = re.compile(r"\b(ram|usage|used|free|available|gb|mb|swap)\b", re.IGNORECASE)
-RE_MEMORY_WORDS = re.compile(r"\b(remember|recall|forget|memory|memories|preference|preferences|saved\s+note|saved\s+notes)\b", re.IGNORECASE)
-RE_MEMORY_QUERY = re.compile(r"\b(what('s| is| did)|do you remember|do you recall)\b.*\b(my|i)\b", re.IGNORECASE)
+RE_MEMORY_WORDS = re.compile(r"\b(remem[a-z]*|remeb[a-z]*|recall[a-z]*|forget[a-z]*|memory|memories|preference|preferences|saved\s+note|saved\s+notes)\b", re.IGNORECASE)
+RE_MEMORY_SET_STATEMENT = re.compile(r"\b(my\s+([a-zA-Z_\-]+)\s+is|i\s+am|call\s+me|i\s+like|i\s+prefer)\b", re.IGNORECASE)
+RE_MEMORY_QUERY = re.compile(r"\b(who\s*am\s*i|whoami)\b|(\b(what('s| is| did)|do you remember|do you recall)\b.*\b(my|i|name|distro|editor|preference|favorite)\b)", re.IGNORECASE)
 RE_TASK = re.compile(r"\b(remind|reminder|reminders|task|tasks|schedule|scheduled|alarm|todo|to-do)\b", re.IGNORECASE)
 
 STOPWORDS = {
@@ -36,12 +38,11 @@ def _is_service_query(q: str) -> bool:
     """Detects if query targets a Linux systemd user service without hardcoding service names."""
     if RE_SERVICE_EXPLICIT.search(q):
         return True
-    m = RE_SERVICE_ACTION.search(q)
-    if m:
+    for m in RE_SERVICE_ACTION.finditer(q):
         action = m.group(1).lower()
         target = m.group(2).lower()
         if target not in STOPWORDS and not target.isdigit():
-            if action in ["restart", "reload", "status of"]:
+            if action in ["restart", "reload", "status of", "state of"]:
                 return True
             if re.search(r"\b(running|active|failed|dead|up|down|status)\b", q, re.IGNORECASE):
                 return True
@@ -97,15 +98,16 @@ def route_tools(query: str, all_tools: List[Dict[str, Any]], max_tools: int = 4)
             _add("restart_service")
 
     # 5. Hardware, Power & Health Metrics
+    has_cpu_ram = bool(RE_CPU_RAM.search(q))
     has_metrics = bool(RE_BATTERY_METRICS.search(q))
     has_power = bool(RE_POWER_PROFILES.search(q))
-    if has_metrics or has_power:
-        if has_power and not has_metrics:
-            _add("power_profile")
-            _add("system_health")
-        else:
-            _add("system_health")
-            _add("power_profile")
+    if has_cpu_ram and not has_power:
+        _add("system_health")
+    elif has_power and not has_cpu_ram and not has_metrics:
+        _add("power_profile")
+    elif has_cpu_ram or has_metrics or has_power:
+        _add("system_health")
+        _add("power_profile")
 
     # 6. Trash & Housekeeping
     if RE_TRASH.search(q):
@@ -113,17 +115,19 @@ def route_tools(query: str, all_tools: List[Dict[str, Any]], max_tools: int = 4)
 
     # 7. User Memory & Personalization
     has_ram = bool(RE_RAM_WORDS.search(q))
-    is_mem = (bool(RE_MEMORY_WORDS.search(q)) and not has_ram) or (
-        bool(RE_MEMORY_QUERY.search(q)) and not has_ram and not any(k in q.lower() for k in ["battery", "cpu", "power", "wifi", "bluetooth", "date", "time"])
-    )
+    is_mem = (
+        bool(RE_MEMORY_WORDS.search(q)) or
+        bool(RE_MEMORY_SET_STATEMENT.search(q)) or
+        bool(RE_MEMORY_QUERY.search(q))
+    ) and not has_ram and not any(k in q.lower() for k in ["battery", "cpu", "power", "wifi", "bluetooth", "date", "time"])
     if is_mem:
         if re.search(r"\b(forget|delete|remove|clear)\b", q, re.IGNORECASE):
             _add("memory_delete")
         elif re.search(r"\b(list|all|show|notes)\b", q, re.IGNORECASE):
             _add("memory_list")
-        elif re.search(r"\b(what|recall|get|lookup|look up)\b", q, re.IGNORECASE):
+        elif re.search(r"\b(what|recall|get|lookup|look up|who)\b", q, re.IGNORECASE):
             _add("memory_get")
-        elif re.search(r"\b(remember|save|set|store|note)\b", q, re.IGNORECASE):
+        elif re.search(r"\b(remember|save|set|store|note)\b", q, re.IGNORECASE) or bool(RE_MEMORY_SET_STATEMENT.search(q)):
             _add("memory_set")
         else:
             _add("memory_set")
