@@ -18,16 +18,24 @@ except (ImportError, ValueError):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="fuge-nanohat: FunctionGemma 270M Native Function Calling Test Harness",
+        prog="nanohat",
+        description="🎩 NanoHat v3.0.0 — Autonomous Linux OS Agent (FunctionGemma 270M)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""Examples:
-  python main.py -p "What is 45 * 12?"
-  python main.py -p "Calculate 2 ** 10" --verbose
-  python main.py -p "What is 15 percent of 800?" -v v2
+  nanohat "What is 45 * 12?"
+  nanohat "What is my current RAM usage?"
+  nanohat "Check battery status"
+  nanohat "Is bluetooth on?"
+  nanohat "Remember my favorite editor is neovim"
+  nanohat "What is my editor?"
+  nanohat "Remind me to stretch at 5pm"
+  nanohat --verbose "Status of pipewire"
 """
     )
-    parser.add_argument("-p", "--prompt", type=str, help="User query/prompt")
-    parser.add_argument("-v", "--version", type=str, default=DEFAULT_VERSION, choices=list(PROMPTS.keys()),
+    parser.add_argument("query", nargs="?", type=str, help="User query or instruction")
+    parser.add_argument("-p", "--prompt", type=str, help="User query/prompt (flag syntax)")
+    parser.add_argument("-V", "--version", action="version", version="%(prog)s v3.0.0 (FunctionGemma 270M)")
+    parser.add_argument("-pv", "--prompt-version", type=str, default=DEFAULT_VERSION, choices=list(PROMPTS.keys()),
                         help=f"System prompt version (default: {DEFAULT_VERSION})")
     parser.add_argument("--model", type=str, default="functiongemma:latest",
                         help="Ollama model name (default: functiongemma:latest)")
@@ -35,15 +43,16 @@ def main():
 
     args = parser.parse_args()
 
-    if not args.prompt:
+    user_query = args.query or args.prompt
+    if not user_query:
         parser.print_help()
         sys.exit(0)
 
     client = OllamaClient(model=args.model)
-    engine = AgentEngine(client=client, prompt_version=args.version, verbose=args.verbose)
+    engine = AgentEngine(client=client, prompt_version=args.prompt_version, verbose=args.verbose)
 
     try:
-        result = engine.run(args.prompt)
+        result = engine.run(user_query)
         print(result)
     except Exception as e:
         print(f"\033[91mError: {e}\033[0m", file=sys.stderr)
