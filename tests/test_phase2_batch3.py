@@ -28,7 +28,7 @@ class TestBatch3FunctionsMocked(unittest.TestCase):
     def test_toggle_wifi_status(self, mock_run):
         mock_run.return_value = MagicMock(stdout="enabled", returncode=0)
         res = toggle_wifi("status")
-        self.assertIn("Wi-Fi radio is currently: enabled", res)
+        self.assertIn("Wi-Fi radio is enabled", res)
 
     @patch("runtime.functions.subprocess.run")
     def test_toggle_wifi_off(self, mock_run):
@@ -41,7 +41,7 @@ class TestBatch3FunctionsMocked(unittest.TestCase):
     def test_toggle_bluetooth_status(self, mock_run):
         mock_run.return_value = MagicMock(stdout="Powered: yes\n", returncode=0)
         res = toggle_bluetooth("status")
-        self.assertIn("Bluetooth is currently: powered on", res)
+        self.assertIn("Bluetooth is powered on", res)
 
     @patch("runtime.functions.subprocess.run")
     def test_toggle_bluetooth_off(self, mock_run):
