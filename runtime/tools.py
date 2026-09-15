@@ -159,6 +159,135 @@ RESTART_SERVICE_TOOL = {
     }
 }
 
+MEMORY_SET_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "memory_set",
+        "description": "Save a key-value memory, user preference, or note to persistent memory.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string",
+                    "description": "The memory key, label, or topic (e.g. 'favorite_shell', 'birthday', 'project')."
+                },
+                "value": {
+                    "type": "string",
+                    "description": "The value or information to remember."
+                }
+            },
+            "required": ["key", "value"]
+        }
+    }
+}
+
+MEMORY_GET_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "memory_get",
+        "description": "Retrieve stored user data, settings, or values from memory by key.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string",
+                    "description": "Key to look up in memory (e.g. 'favorite_distro', 'shell')."
+                }
+            },
+            "required": ["key"]
+        }
+    }
+}
+
+MEMORY_LIST_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "memory_list",
+        "description": "List all stored user memories, preferences, and saved notes.",
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    }
+}
+
+MEMORY_DELETE_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "memory_delete",
+        "description": "Delete or forget a saved memory by key.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string",
+                    "description": "The key of the memory to delete."
+                }
+            },
+            "required": ["key"]
+        }
+    }
+}
+
+TASK_ADD_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "task_add",
+        "description": "Schedule a task, reminder, or to-do item with a title and optional due time.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "description": "The task title, alert, or reminder description."
+                },
+                "due_time": {
+                    "type": "string",
+                    "description": "When the task is due (e.g. '5pm', 'tomorrow at 10am', 'Friday'). Defaults to 'today'."
+                }
+            },
+            "required": ["title"]
+        }
+    }
+}
+
+TASK_LIST_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "task_list",
+        "description": "List scheduled tasks (filter by 'pending', 'completed', 'cancelled', or 'all').",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "description": "Status filter: 'pending', 'completed', 'cancelled', or 'all'. Defaults to 'pending'."
+                }
+            },
+            "required": []
+        }
+    }
+}
+
+TASK_CANCEL_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "task_cancel",
+        "description": "Cancel a scheduled task or reminder by its integer task ID.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task_id": {
+                    "type": "integer",
+                    "description": "The integer ID of the task to cancel."
+                }
+            },
+            "required": ["task_id"]
+        }
+    }
+}
+
 # Master tools catalog
 ALL_TOOLS = [
     CALCULATOR_TOOL,
@@ -169,7 +298,14 @@ ALL_TOOLS = [
     TOGGLE_WIFI_TOOL,
     TOGGLE_BLUETOOTH_TOOL,
     SERVICE_STATUS_TOOL,
-    RESTART_SERVICE_TOOL
+    RESTART_SERVICE_TOOL,
+    MEMORY_SET_TOOL,
+    MEMORY_GET_TOOL,
+    MEMORY_LIST_TOOL,
+    MEMORY_DELETE_TOOL,
+    TASK_ADD_TOOL,
+    TASK_LIST_TOOL,
+    TASK_CANCEL_TOOL
 ]
 
 
