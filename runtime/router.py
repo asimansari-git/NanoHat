@@ -17,6 +17,10 @@ RE_POWER_PROFILES = re.compile(r"\b(power|profile|saver|performance)\b", re.IGNO
 RE_TRASH = re.compile(r"\b(trash|recycle|empty\s+trash|clear\s+trash|bin)\b", re.IGNORECASE)
 RE_MATH_WORDS = re.compile(r"\b(calculate|calc|math|arithmetic|eval|evaluate)\b", re.IGNORECASE)
 RE_MATH_EXPR = re.compile(r"\d+\s*[\+\-\*\/]\s*\d+")
+RE_RAM_WORDS = re.compile(r"\b(ram|usage|used|free|available|gb|mb|swap)\b", re.IGNORECASE)
+RE_MEMORY_WORDS = re.compile(r"\b(remember|recall|forget|memory|memories|preference|preferences|saved\s+note|saved\s+notes)\b", re.IGNORECASE)
+RE_MEMORY_QUERY = re.compile(r"\b(what('s| is| did)|do you remember|do you recall)\b.*\b(my|i)\b", re.IGNORECASE)
+RE_TASK = re.compile(r"\b(remind|reminder|reminders|task|tasks|schedule|scheduled|alarm|todo|to-do)\b", re.IGNORECASE)
 
 STOPWORDS = {
     "the", "a", "an", "my", "your", "this", "that", "today", "now",
@@ -106,6 +110,36 @@ def route_tools(query: str, all_tools: List[Dict[str, Any]], max_tools: int = 4)
     # 6. Trash & Housekeeping
     if RE_TRASH.search(q):
         _add("empty_trash")
+
+    # 7. User Memory & Personalization
+    has_ram = bool(RE_RAM_WORDS.search(q))
+    is_mem = (bool(RE_MEMORY_WORDS.search(q)) and not has_ram) or (
+        bool(RE_MEMORY_QUERY.search(q)) and not has_ram and not any(k in q.lower() for k in ["battery", "cpu", "power", "wifi", "bluetooth", "date", "time"])
+    )
+    if is_mem:
+        if re.search(r"\b(forget|delete|remove|clear)\b", q, re.IGNORECASE):
+            _add("memory_delete")
+        elif re.search(r"\b(list|all|show|notes)\b", q, re.IGNORECASE):
+            _add("memory_list")
+        elif re.search(r"\b(what|recall|get|lookup|look up)\b", q, re.IGNORECASE):
+            _add("memory_get")
+        elif re.search(r"\b(remember|save|set|store|note)\b", q, re.IGNORECASE):
+            _add("memory_set")
+        else:
+            _add("memory_set")
+            _add("memory_get")
+
+    # 8. Scheduled Tasks & Reminders
+    if RE_TASK.search(q):
+        if re.search(r"\b(cancel|delete|remove|done|finish)\b", q, re.IGNORECASE):
+            _add("task_cancel")
+            _add("task_list")
+        elif re.search(r"\b(list|all|show|pending)\b", q, re.IGNORECASE):
+            _add("task_list")
+            _add("task_add")
+        else:
+            _add("task_add")
+            _add("task_list")
 
     # Fallback if no specific cluster matched
     if not selected_names:

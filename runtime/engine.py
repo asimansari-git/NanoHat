@@ -65,6 +65,29 @@ class AgentEngine:
             elif "status" in norm or "service" in norm:
                 func = REGISTRY.get("service_status")
                 resolved_name = "service_status"
+            elif "memory" in norm or "remember" in norm:
+                if any(w in norm for w in ["get", "recall", "find", "read"]):
+                    func = REGISTRY.get("memory_get")
+                    resolved_name = "memory_get"
+                elif any(w in norm for w in ["list", "all"]):
+                    func = REGISTRY.get("memory_list")
+                    resolved_name = "memory_list"
+                elif any(w in norm for w in ["del", "forget", "remove"]):
+                    func = REGISTRY.get("memory_delete")
+                    resolved_name = "memory_delete"
+                else:
+                    func = REGISTRY.get("memory_set")
+                    resolved_name = "memory_set"
+            elif "task" in norm or "remind" in norm or "todo" in norm:
+                if any(w in norm for w in ["cancel", "del", "remove"]):
+                    func = REGISTRY.get("task_cancel")
+                    resolved_name = "task_cancel"
+                elif any(w in norm for w in ["list", "all", "show"]):
+                    func = REGISTRY.get("task_list")
+                    resolved_name = "task_list"
+                else:
+                    func = REGISTRY.get("task_add")
+                    resolved_name = "task_add"
 
         if not func:
             err = f"Tool '{tool_name}' not found in registry."

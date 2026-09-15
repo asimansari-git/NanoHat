@@ -7,6 +7,10 @@ import shutil
 import subprocess
 from datetime import datetime
 import psutil
+try:
+    from .db import get_connection, init_db
+except (ImportError, ValueError):
+    from db import get_connection, init_db
 
 _SAFE_OPERATORS = {
     ast.Add: operator.add,
@@ -316,6 +320,114 @@ def restart_service(service_name: str = None, name: str = None) -> str:
         return f"Error restarting service '{unit}': {e.stderr.strip() or str(e)}"
 
 
+def memory_set(key: str = None, value: str = None, name: str = None, content: str = None) -> str:
+    """Stores or updates a key-value pair in persistent user memory."""
+    k = (key or name or "").strip()
+    v = (value or content or "").strip()
+    if not k or not v:
+        return "Error: Both 'key' and 'value' are required to store a memory."
+    init_db()
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO user_memory (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP;",
+            (k, v)
+        )
+        conn.commit()
+    return f"Saved to memory: '{k}' = '{v}'"
+
+
+def memory_get(key: str = None, name: str = None) -> str:
+    """Retrieves a value from user memory by key."""
+    k = (key or name or "").strip()
+    if not k:
+        return "Error: Please specify the 'key' to retrieve."
+    init_db()
+    with get_connection() as conn:
+        cursor = conn.execute("SELECT key, value FROM user_memory WHERE LOWER(key) = LOWER(?);", (k,))
+        row = cursor.fetchone()
+        if row:
+            return f"Memory '{row['key']}': {row['value']}"
+        return f"No memory found for key '{k}'."
+
+
+def memory_list() -> str:
+    """Lists all stored keys and values in user memory."""
+    init_db()
+    with get_connection() as conn:
+        cursor = conn.execute("SELECT key, value FROM user_memory ORDER BY updated_at DESC;")
+        rows = cursor.fetchall()
+        if not rows:
+            return "User memory is currently empty."
+        lines = [f"- {row['key']}: {row['value']}" for row in rows]
+        return "User Memory:\n" + "\n".join(lines)
+
+
+def memory_delete(key: str = None, name: str = None) -> str:
+    """Deletes a key-value pair from user memory."""
+    k = (key or name or "").strip()
+    if not k:
+        return "Error: Please specify the 'key' to delete."
+    init_db()
+    with get_connection() as conn:
+        cursor = conn.execute("DELETE FROM user_memory WHERE LOWER(key) = LOWER(?);", (k,))
+        conn.commit()
+        if cursor.rowcount > 0:
+            return f"Memory for key '{k}' deleted successfully."
+        return f"No memory found for key '{k}' to delete."
+
+
+def task_add(title: str = None, due_time: str = None, task: str = None, time: str = None, notify_minutes_before: int = 0) -> str:
+    """Schedules a new task or reminder."""
+    t = (title or task or "").strip()
+    due = (due_time or time or "unspecified").strip()
+    if not t:
+        return "Error: Please specify the task title or description."
+    init_db()
+    with get_connection() as conn:
+        cursor = conn.execute(
+            "INSERT INTO scheduled_tasks (title, due_time, notify_minutes_before, status) VALUES (?, ?, ?, 'pending');",
+            (t, due, int(notify_minutes_before or 0))
+        )
+        task_id = cursor.lastrowid
+        conn.commit()
+    return f"Task #{task_id} scheduled: '{t}' (Due: {due})."
+
+
+def task_list(status: str = "pending") -> str:
+    """Lists scheduled tasks filtered by status ('pending', 'completed', 'cancelled', or 'all')."""
+    s = (status or "pending").strip().lower()
+    init_db()
+    with get_connection() as conn:
+        if s == "all":
+            cursor = conn.execute("SELECT id, title, due_time, status FROM scheduled_tasks ORDER BY id ASC;")
+        else:
+            cursor = conn.execute("SELECT id, title, due_time, status FROM scheduled_tasks WHERE LOWER(status) = ? ORDER BY id ASC;", (s,))
+        rows = cursor.fetchall()
+        if not rows:
+            return f"No {s} tasks found."
+        lines = [f"- Task #{row['id']}: '{row['title']}' (Due: {row['due_time']}, Status: {row['status']})" for row in rows]
+        return f"Scheduled Tasks ({s}):\n" + "\n".join(lines)
+
+
+def task_cancel(task_id: Any = None, id: Any = None) -> str:
+    """Cancels a scheduled task by ID."""
+    raw_id = task_id if task_id is not None else id
+    if raw_id is None:
+        return "Error: Please specify the task_id to cancel."
+    try:
+        tid = int(raw_id)
+    except (ValueError, TypeError):
+        return f"Error: Invalid task ID '{raw_id}'. Must be an integer."
+    init_db()
+    with get_connection() as conn:
+        cursor = conn.execute("UPDATE scheduled_tasks SET status = 'cancelled' WHERE id = ?;", (tid,))
+        conn.commit()
+        if cursor.rowcount > 0:
+            return f"Task #{tid} has been cancelled."
+        return f"Task #{tid} not found."
+
+
 # Tool dispatch registry with sub-1B alias mapping
 REGISTRY = {
     "calculator": calculator,
@@ -327,6 +439,13 @@ REGISTRY = {
     "toggle_bluetooth": toggle_bluetooth,
     "service_status": service_status,
     "restart_service": restart_service,
+    "memory_set": memory_set,
+    "memory_get": memory_get,
+    "memory_list": memory_list,
+    "memory_delete": memory_delete,
+    "task_add": task_add,
+    "task_list": task_list,
+    "task_cancel": task_cancel,
     # Direct Aliases to absorb sub-1B model hallucinations
     "battery_level": system_health,
     "battery_status": system_health,
@@ -335,6 +454,14 @@ REGISTRY = {
     "wifi_control": toggle_wifi,
     "bluetooth_control": toggle_bluetooth,
     "system_clock": get_datetime,
+    "set_memory": memory_set,
+    "get_memory": memory_get,
+    "list_memory": memory_list,
+    "delete_memory": memory_delete,
+    "add_task": task_add,
+    "list_tasks": task_list,
+    "cancel_task": task_cancel,
+    "set_reminder": task_add,
 }
 
 
