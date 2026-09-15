@@ -6,6 +6,7 @@ import sys
 import shutil
 import subprocess
 from datetime import datetime
+import re
 import psutil
 try:
     from .db import get_connection, init_db
@@ -320,12 +321,23 @@ def restart_service(service_name: str = None, name: str = None) -> str:
         return f"Error restarting service '{unit}': {e.stderr.strip() or str(e)}"
 
 
+def _normalize_key(key: str) -> str:
+    """Normalizes key names: lowercases, trims, and collapses whitespace, dashes, and underscores."""
+    if not key:
+        return ""
+    k = key.strip().lower()
+    k = re.sub(r'[\s\-]+', '_', k)
+    k = re.sub(r'_+', '_', k)
+    return k.strip('_')
+
+
 def memory_set(key: str = None, value: str = None, name: str = None, content: str = None) -> str:
     """Stores or updates a key-value pair in persistent user memory."""
-    k = (key or name or "").strip()
+    raw_k = (key or name or "").strip()
     v = (value or content or "").strip()
-    if not k or not v:
+    if not raw_k or not v:
         return "Error: Both 'key' and 'value' are required to store a memory."
+    k = _normalize_key(raw_k)
     init_db()
     with get_connection() as conn:
         conn.execute(
@@ -339,15 +351,23 @@ def memory_set(key: str = None, value: str = None, name: str = None, content: st
 
 def memory_get(key: str = None, name: str = None) -> str:
     """Retrieves a value from user memory by key."""
-    k = (key or name or "").strip()
-    if not k:
+    raw_k = (key or name or "").strip()
+    if not raw_k:
         return "Error: Please specify the 'key' to retrieve."
+    k = _normalize_key(raw_k)
     init_db()
     with get_connection() as conn:
         cursor = conn.execute("SELECT key, value FROM user_memory WHERE LOWER(key) = LOWER(?);", (k,))
         row = cursor.fetchone()
+        if not row:
+            # Fallback scan: check if any existing key in DB normalizes to k
+            cursor = conn.execute("SELECT key, value FROM user_memory;")
+            for r in cursor.fetchall():
+                if _normalize_key(r["key"]) == k:
+                    row = r
+                    break
         if row:
-            return f"Memory '{row['key']}': {row['value']}"
+            return f"{row['key']} is {row['value']}."
         return f"No memory found for key '{k}'."
 
 
@@ -365,15 +385,28 @@ def memory_list() -> str:
 
 def memory_delete(key: str = None, name: str = None) -> str:
     """Deletes a key-value pair from user memory."""
-    k = (key or name or "").strip()
-    if not k:
+    raw_k = (key or name or "").strip()
+    if not raw_k:
         return "Error: Please specify the 'key' to delete."
+    k = _normalize_key(raw_k)
     init_db()
     with get_connection() as conn:
         cursor = conn.execute("DELETE FROM user_memory WHERE LOWER(key) = LOWER(?);", (k,))
         conn.commit()
         if cursor.rowcount > 0:
             return f"Memory for key '{k}' deleted successfully."
+        # Fallback check for unnormalized existing keys
+        cursor = conn.execute("SELECT key FROM user_memory;")
+        target_key = None
+        for r in cursor.fetchall():
+            if _normalize_key(r["key"]) == k:
+                target_key = r["key"]
+                break
+        if target_key:
+            cursor = conn.execute("DELETE FROM user_memory WHERE key = ?;", (target_key,))
+            conn.commit()
+            if cursor.rowcount > 0:
+                return f"Memory for key '{target_key}' deleted successfully."
         return f"No memory found for key '{k}' to delete."
 
 
