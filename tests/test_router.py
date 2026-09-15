@@ -82,9 +82,11 @@ class TestRouter(unittest.TestCase):
     def test_memory_intent_refinements(self):
         # Identity statement routing to memory_set
         set_cases = [
-            "My name is Asim?",
-            "My name is Asim",
-            "Remeber myy name is Asim?",
+            "My name is Milo?",
+            "My name is Milo",
+            "My pet name is Nimo?",
+            "Mah pet name is Nimo?",
+            "Remeber myy favorite editor is Neovim?",
             "Remember that my favorite distro is Fedora",
             "I prefer python over rust"
         ]
@@ -97,6 +99,7 @@ class TestRouter(unittest.TestCase):
         get_cases = [
             "What is my name?",
             "What is my favorite distro?",
+            "What is my pet name?",
             "Who am I?",
             "Do you recall my editor?"
         ]
