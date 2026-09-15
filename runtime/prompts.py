@@ -13,13 +13,13 @@ BASE_SYSTEM_PROMPT = (
 
 TOOL_SNIPPETS = {
     "calculator": "- Use calculator for all mathematical calculations and expressions (e.g. 7+7, 7+7*18). Pass the exact full expression to calculator without dropping terms.",
-    "system_health": "- Use system_health to check CPU, RAM, and battery metrics (battery level, battery status, health, CPU/RAM usage).",
+    "system_health": "- Use system_health to check system metrics. Pass metric='ram' for RAM or memory usage, metric='cpu' for CPU usage, metric='battery' for battery status, or metric='all'. Call system_health immediately without asking questions.",
     "power_profile": "- Use power_profile to inspect ('get') or switch ('set') power profiles.",
     "get_datetime": "- Use get_datetime for any date, time, or day of the week queries. Call get_datetime immediately without asking questions.",
     "empty_trash": "- Use empty_trash to permanently empty or clear the Linux trash bin.",
     "toggle_wifi": "- Use toggle_wifi to check Wi-Fi status, turn Wi-Fi on or off, or toggle Wi-Fi. Always call toggle_wifi immediately for status queries without asking questions.",
     "toggle_bluetooth": "- Use toggle_bluetooth to check Bluetooth status, turn Bluetooth on or off, or toggle Bluetooth. Always call toggle_bluetooth immediately for status queries without asking questions.",
-    "service_status": "- Use service_status to check the status or running state of any service, daemon, or application (e.g. ollama, pipewire, java).",
+    "service_status": "- Use service_status to check the status or running state of any service, daemon, server, or application (e.g. ollama, pipewire, tailscale, java).",
     "restart_service": "- Use restart_service to restart an allowlisted systemd user service (e.g. pipewire, wireplumber).",
     "memory_set": "- Use memory_set to save user information, name, distro, facts, or preferences to persistent memory (e.g. key='name', value='Asim').",
     "memory_get": "- Use memory_get to look up stored user data from memory (e.g. name, user name, favorite distro, settings). Always call memory_get immediately without asking questions or refusing.",
