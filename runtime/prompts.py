@@ -20,7 +20,14 @@ TOOL_SNIPPETS = {
     "toggle_wifi": "- Use toggle_wifi to check Wi-Fi status, turn Wi-Fi on or off, or toggle Wi-Fi.",
     "toggle_bluetooth": "- Use toggle_bluetooth to check Bluetooth status, turn Bluetooth on or off, or toggle Bluetooth.",
     "service_status": "- Use service_status to check the status or running state of any service or application (e.g. ollama, pipewire).",
-    "restart_service": "- Use restart_service to restart an allowlisted systemd user service (e.g. pipewire, wireplumber)."
+    "restart_service": "- Use restart_service to restart an allowlisted systemd user service (e.g. pipewire, wireplumber).",
+    "memory_set": "- Use memory_set to save a note, fact, or user data to persistent memory (key-value pair).",
+    "memory_get": "- Use memory_get to look up stored user data from memory. Always call memory_get for questions about user settings, favorites, or saved facts.",
+    "memory_list": "- Use memory_list to list all stored user memories and notes.",
+    "memory_delete": "- Use memory_delete to delete or forget a stored note or memory by key.",
+    "task_add": "- Use task_add to schedule a reminder, task, or to-do item.",
+    "task_list": "- Use task_list to list scheduled tasks or reminders.",
+    "task_cancel": "- Use task_cancel to cancel a scheduled task by its integer ID."
 }
 
 PROMPTS = {
