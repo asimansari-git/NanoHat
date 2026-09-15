@@ -20,8 +20,8 @@ RE_MATH_WORDS = re.compile(r"\b(calculate|calc|math|arithmetic|eval|evaluate)\b"
 RE_MATH_EXPR = re.compile(r"\d+\s*[\+\-\*\/]\s*\d+")
 RE_RAM_WORDS = re.compile(r"\b(ram|usage|used|free|available|gb|mb|swap)\b", re.IGNORECASE)
 RE_MEMORY_WORDS = re.compile(r"\b(remem[a-z]*|remeb[a-z]*|recall[a-z]*|forget[a-z]*|memory|memories|preference|preferences|saved\s+note|saved\s+notes)\b", re.IGNORECASE)
-RE_MEMORY_SET_STATEMENT = re.compile(r"\b(my\s+([a-zA-Z_\-]+)\s+is|i\s+am|call\s+me|i\s+like|i\s+prefer)\b", re.IGNORECASE)
-RE_MEMORY_QUERY = re.compile(r"\b(who\s*am\s*i|whoami)\b|(\b(what('s| is| did)|do you remember|do you recall)\b.*\b(my|i|name|distro|editor|preference|favorite)\b)", re.IGNORECASE)
+RE_MEMORY_SET_STATEMENT = re.compile(r"\b((my|mah)\s+([a-zA-Z_\-]+\s+){1,4}is|i\s+am|call\s+me|i\s+like|i\s+prefer)\b", re.IGNORECASE)
+RE_MEMORY_QUERY = re.compile(r"\b(who\s*am\s*i|whoami)\b|(\b(what('s| is| did)|do you remember|do you recall)\b.*\b(my|i|name|distro|editor|preference|favorite|pet)\b)", re.IGNORECASE)
 RE_TASK = re.compile(r"\b(remind|reminder|reminders|task|tasks|schedule|scheduled|alarm|todo|to-do)\b", re.IGNORECASE)
 
 STOPWORDS = {

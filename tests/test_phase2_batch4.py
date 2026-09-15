@@ -115,6 +115,17 @@ class TestBatch4DatabaseAndFunctions(unittest.TestCase):
         del_res = memory_delete(key="legacy_unnormalized_key")
         self.assertIn("deleted successfully", del_res)
 
+    def test_smart_topic_fallback(self):
+        # Save as pet_name, lookup as pet
+        memory_set(key="pet_name", value="Nimo")
+        res_pet = memory_get(key="pet")
+        self.assertIn("Nimo", res_pet)
+
+        # Save as favorite_editor, lookup as editor
+        memory_set(key="favorite_editor", value="neovim")
+        res_ed = memory_get(key="editor")
+        self.assertIn("neovim", res_ed)
+
     def test_task_lifecycle(self):
         # 1. Empty list
         self.assertIn("no pending tasks", task_list(status="pending").lower())

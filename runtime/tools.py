@@ -163,17 +163,17 @@ MEMORY_SET_TOOL = {
     "type": "function",
     "function": {
         "name": "memory_set",
-        "description": "Save a key-value memory, user name, preference, or note to persistent memory.",
+        "description": "Save a key-value memory, user preference, or note to persistent memory.",
         "parameters": {
             "type": "object",
             "properties": {
                 "key": {
                     "type": "string",
-                    "description": "The memory key or label (e.g. 'name', 'favorite_distro', 'editor')."
+                    "description": "The memory key or topic label (e.g. 'editor', 'favorite_distro', 'pet_name')."
                 },
                 "value": {
                     "type": "string",
-                    "description": "The value or information to remember (e.g. 'Asim', 'Fedora Workstation')."
+                    "description": "The value or information to remember (e.g. 'neovim', 'Fedora Workstation', 'Milo')."
                 }
             },
             "required": ["key", "value"]
@@ -185,13 +185,13 @@ MEMORY_GET_TOOL = {
     "type": "function",
     "function": {
         "name": "memory_get",
-        "description": "Retrieve stored user data, name, identity, settings, or preferences from memory by key.",
+        "description": "Retrieve stored user data, preferences, or notes from memory by key.",
         "parameters": {
             "type": "object",
             "properties": {
                 "key": {
                     "type": "string",
-                    "description": "Key to look up in memory (e.g. 'name', 'favorite_distro', 'shell', 'editor')."
+                    "description": "Key to look up in memory (e.g. 'editor', 'favorite_distro', 'pet_name')."
                 }
             },
             "required": ["key"]

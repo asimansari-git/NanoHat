@@ -332,6 +332,21 @@ def _normalize_key(key: str) -> str:
     return k.strip('_')
 
 
+def _match_key(stored_key: str, query_key: str) -> bool:
+    """Matches keys allowing for common prefixes, suffixes, and topic aliases (e.g. pet <-> pet_name)."""
+    s = _normalize_key(stored_key)
+    q = _normalize_key(query_key)
+    if s == q:
+        return True
+    if s == f"{q}_name" or f"{s}_name" == q:
+        return True
+    if s.endswith(f"_{q}") or q.endswith(f"_{s}"):
+        return True
+    if s.startswith(f"{q}_") or q.startswith(f"{s}_"):
+        return True
+    return False
+
+
 def memory_set(key: str = None, value: str = None, name: str = None, content: str = None) -> str:
     """Stores or updates a key-value pair in persistent user memory."""
     raw_k = (key or name or "").strip()
@@ -363,10 +378,17 @@ def memory_get(key: str = None, name: str = None) -> str:
         if not row:
             # Fallback scan: check if any existing key in DB normalizes to k
             cursor = conn.execute("SELECT key, value FROM user_memory;")
-            for r in cursor.fetchall():
+            all_rows = cursor.fetchall()
+            for r in all_rows:
                 if _normalize_key(r["key"]) == k:
                     row = r
                     break
+            # Smart topic fallback: check prefix, suffix, and _name variations (e.g. pet <-> pet_name)
+            if not row:
+                for r in all_rows:
+                    if _match_key(r["key"], k):
+                        row = r
+                        break
         if row:
             return f"{row['key']} is {row['value']}."
         return f"No memory found for key '{k}'."
