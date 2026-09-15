@@ -32,7 +32,9 @@ class TestRouter(unittest.TestCase):
             "Check service status for wireplumber",
             "Restart pipewire",
             "Is docker daemon active?",
-            "Check systemd unit ollama"
+            "Check systemd unit ollama",
+            "What is the status of java?",
+            "What is the status of postgresql?"
         ]
         for q in queries:
             tools = route_tools(q, ALL_TOOLS)
@@ -69,6 +71,45 @@ class TestRouter(unittest.TestCase):
         pwr_tools = route_tools("Switch power profile to performance", ALL_TOOLS)
         pwr_names = [t["function"]["name"] for t in pwr_tools]
         self.assertIn("power_profile", pwr_names)
+
+        # RAM and CPU isolation: must NOT include power_profile to prevent 270M confusion
+        for ram_q in ["What is the RAM status?", "What is the RAM usage?", "What is my current RAM usage?", "What is CPU usage?"]:
+            r_tools = route_tools(ram_q, ALL_TOOLS)
+            r_names = [t["function"]["name"] for t in r_tools]
+            self.assertIn("system_health", r_names, f"Query '{ram_q}' failed to route to system_health")
+            self.assertNotIn("power_profile", r_names, f"Query '{ram_q}' incorrectly included power_profile")
+
+    def test_memory_intent_refinements(self):
+        # Identity statement routing to memory_set
+        set_cases = [
+            "My name is Asim?",
+            "My name is Asim",
+            "Remeber myy name is Asim?",
+            "Remember that my favorite distro is Fedora",
+            "I prefer python over rust"
+        ]
+        for q in set_cases:
+            tools = route_tools(q, ALL_TOOLS)
+            names = [t["function"]["name"] for t in tools]
+            self.assertIn("memory_set", names, f"Query '{q}' failed to route to memory_set. Got {names}")
+
+        # Identity query routing to memory_get
+        get_cases = [
+            "What is my name?",
+            "What is my favorite distro?",
+            "Who am I?",
+            "Do you recall my editor?"
+        ]
+        for q in get_cases:
+            tools = route_tools(q, ALL_TOOLS)
+            names = [t["function"]["name"] for t in tools]
+            self.assertIn("memory_get", names, f"Query '{q}' failed to route to memory_get. Got {names}")
+
+        # Ensure RAM queries do NOT route to memory tools despite the word 'memory'
+        ram_mem_tools = route_tools("What is my memory usage?", ALL_TOOLS)
+        ram_mem_names = [t["function"]["name"] for t in ram_mem_tools]
+        self.assertIn("system_health", ram_mem_names)
+        self.assertNotIn("memory_get", ram_mem_names)
 
     def test_math_routing(self):
         queries = [

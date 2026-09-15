@@ -91,13 +91,13 @@ TOGGLE_WIFI_TOOL = {
     "type": "function",
     "function": {
         "name": "toggle_wifi",
-        "description": "Manage Wi-Fi radio power: turn on, turn off, toggle, or query Wi-Fi state.",
+        "description": "Check Wi-Fi radio status or turn Wi-Fi on, off, or toggle.",
         "parameters": {
             "type": "object",
             "properties": {
                 "state": {
                     "type": "string",
-                    "description": "Desired action: 'status', 'on', 'off', or 'toggle'. Defaults to 'status'."
+                    "description": "Action: 'status' (to check status), 'on', 'off', or 'toggle'. Defaults to 'status'."
                 }
             },
             "required": []
@@ -109,13 +109,13 @@ TOGGLE_BLUETOOTH_TOOL = {
     "type": "function",
     "function": {
         "name": "toggle_bluetooth",
-        "description": "Manage Bluetooth radio power: turn on, turn off, toggle, or query Bluetooth state.",
+        "description": "Check Bluetooth radio status or turn Bluetooth on, off, or toggle.",
         "parameters": {
             "type": "object",
             "properties": {
                 "state": {
                     "type": "string",
-                    "description": "Desired action: 'status', 'on', 'off', or 'toggle'. Defaults to 'status'."
+                    "description": "Action: 'status' (to check status), 'on', 'off', or 'toggle'. Defaults to 'status'."
                 }
             },
             "required": []
@@ -163,17 +163,17 @@ MEMORY_SET_TOOL = {
     "type": "function",
     "function": {
         "name": "memory_set",
-        "description": "Save a key-value memory, user preference, or note to persistent memory.",
+        "description": "Save a key-value memory, user name, preference, or note to persistent memory.",
         "parameters": {
             "type": "object",
             "properties": {
                 "key": {
                     "type": "string",
-                    "description": "The memory key, label, or topic (e.g. 'favorite_shell', 'birthday', 'project')."
+                    "description": "The memory key or label (e.g. 'name', 'favorite_distro', 'editor')."
                 },
                 "value": {
                     "type": "string",
-                    "description": "The value or information to remember."
+                    "description": "The value or information to remember (e.g. 'Asim', 'Fedora Workstation')."
                 }
             },
             "required": ["key", "value"]
@@ -185,13 +185,13 @@ MEMORY_GET_TOOL = {
     "type": "function",
     "function": {
         "name": "memory_get",
-        "description": "Retrieve stored user data, settings, or values from memory by key.",
+        "description": "Retrieve stored user data, name, identity, settings, or preferences from memory by key.",
         "parameters": {
             "type": "object",
             "properties": {
                 "key": {
                     "type": "string",
-                    "description": "Key to look up in memory (e.g. 'favorite_distro', 'shell')."
+                    "description": "Key to look up in memory (e.g. 'name', 'favorite_distro', 'shell', 'editor')."
                 }
             },
             "required": ["key"]

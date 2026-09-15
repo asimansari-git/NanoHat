@@ -81,6 +81,40 @@ class TestBatch4DatabaseAndFunctions(unittest.TestCase):
         self.assertIn("deleted successfully", res_del)
         self.assertIn("no memory found", memory_get(key="favorite_editor").lower())
 
+    def test_memory_key_normalization(self):
+        # Setting with trailing space, underscore, or hyphen
+        memory_set(key="favorite_ distro", value="Fedora Workstation")
+        
+        # Retrieving with clean key
+        res = memory_get(key="favorite_distro")
+        self.assertIn("Fedora Workstation", res)
+
+        # Retrieving with spaces
+        res_spaces = memory_get(key="favorite distro")
+        self.assertIn("Fedora Workstation", res_spaces)
+
+        # Retrieving with dashes
+        res_dashes = memory_get(key="favorite-distro")
+        self.assertIn("Fedora Workstation", res_dashes)
+
+        # Deletion with alternate format
+        del_res = memory_delete(key="favorite distro")
+        self.assertIn("deleted successfully", del_res)
+
+    def test_legacy_unnormalized_key_fallback(self):
+        # Directly insert an unnormalized key without going through memory_set
+        with get_connection(self.temp_db.name) as conn:
+            conn.execute("INSERT INTO user_memory (key, value) VALUES ('legacy_ unnormalized_ key', 'legacy_value');")
+            conn.commit()
+
+        # memory_get with clean normalized key should find it via fallback scan
+        res = memory_get(key="legacy_unnormalized_key")
+        self.assertIn("legacy_value", res)
+
+        # memory_delete with clean key should delete it
+        del_res = memory_delete(key="legacy_unnormalized_key")
+        self.assertIn("deleted successfully", del_res)
+
     def test_task_lifecycle(self):
         # 1. Empty list
         self.assertIn("no pending tasks", task_list(status="pending").lower())
