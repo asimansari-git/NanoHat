@@ -31,7 +31,7 @@ SYSTEM_HEALTH_TOOL = {
             "properties": {
                 "metric": {
                     "type": "string",
-                    "description": "Metric to query: 'ram' for RAM or memory usage, 'cpu' for CPU utilization, 'battery' for battery status, or 'all'. Defaults to 'all'."
+                    "description": "Metric to query: Accepts 'ram' for RAM or memory usage, 'cpu' for CPU utilization, 'battery' for battery status, or 'all'. Defaults to 'all'."
                 }
             },
             "required": []
@@ -244,7 +244,7 @@ TASK_ADD_TOOL = {
                 },
                 "due_time": {
                     "type": "string",
-                    "description": "When the task is due (e.g. '5pm', 'tomorrow at 10am', 'Friday'). Defaults to 'today'."
+                    "description": "When the task is due. Accepts seconds, minutes, hours, days, time, and date. Defaults to 'today'."
                 }
             },
             "required": ["title"]
@@ -280,7 +280,7 @@ TASK_CANCEL_TOOL = {
             "properties": {
                 "task_id": {
                     "type": "integer",
-                    "description": "The integer ID of the task to cancel."
+                    "description": "The integer ID of the task to be canceled or deleted."
                 }
             },
             "required": ["task_id"]

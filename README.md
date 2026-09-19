@@ -1,114 +1,165 @@
-# NanoHat: Sub-1B Fedora Linux OS Agent
+# 🎩 NanoHat v3.0.0: Autonomous Sub-300M Linux OS Agent
 
-A lightweight, autonomous AI agent powered by **SmolLM2-360M-Instruct** designed specifically for **Fedora Linux**, powered by a high-performance native CLI runtime.
+> *"Fine-tuning is the last resort. First, try all methods of systems engineering."*
 
-## Key Features
-- **6 Consolidated Core Tools**: `calculator`, `web_search`, `user_memory`, `scheduler`, `system_health`, and `system_action`.
-- **Fail-Closed Safety**: destructive actions require interactive confirmation; headless sessions refuse by default (`NANOHAT_AUTO_APPROVE_DESTRUCTIVE=1` overrides for trusted daemons). Persistent tasks with absolute due times survive restarts.
-- **Zero Shell Interpolation Security**: All system executions run through `subprocess.run(shell=False)` with argument arrays and process sanitization.
-- **Zero-Overhead Native Harness**: Minimal prompt overhead (~100 tokens), preserving context for sub-1B language models.
-- **FedoraFormatBridge**: Intercepts custom `<thought>` and `<tool_call>` tags from fine-tuned weights and bridges them to the native tool-calling engine.
-- **Curriculum Synthetic Data Generator**: 4 curriculum phases with balanced tool tracking, ground-truth CLI fixtures, and canonical syntax validation.
-- **Loss Masking Collator**: Full-conversation single-pass tokenization with character offset mapping (labels = -100 for non-assistant tokens).
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Platform: Linux (Fedora)](https://img.shields.io/badge/Platform-Fedora%20%2F%20Linux-navy.svg)](#)
+[![Model: FunctionGemma-270M](https://img.shields.io/badge/Model-FunctionGemma--270M-red.svg)](#)
+[![Memory: ~600MB RAM](https://img.shields.io/badge/RAM-~600MB-green.svg)](#)
 
----
+**NanoHat** is an ultra-lightweight, offline-first autonomous OS agent that runs locally with **sub-second CPU latency** and a **~600MB RAM footprint**. 
 
-## Directory Structure
-
-```
-~/nanohat/
-├── grounding/
-│   ├── capture_tool_outputs.py      # Captures live Fedora CLI fixtures
-│   └── real_tool_outputs.json       # Ground-truth CLI output snippets
-├── generator/
-│   ├── config.py                    # Generator parameters & budget limits
-│   ├── schemas.py                   # 6-tool JSON schema & allowed enums
-│   ├── prompts.py                   # Curriculum prompt templates (Phases 1-4)
-│   └── run_generator.py             # Generator orchestrator with balanced tool tracking
-├── validator/
-│   ├── canonicalizer.py             # Re-serializes tool calls into canonical JSON syntax
-│   ├── schema_checker.py            # Enforces role order, exact system prompt, concise thought
-│   └── validate_dataset.py          # Batch validator filtering raw files into golden dataset
-├── dataset/
-│   ├── raw_batches/                 # Raw DeepSeek generation batches
-│   ├── validated/                   # Clean canonicalized dataset (500–800 samples)
-│   └── train_eval_split.py          # Split generator (90% train / 10% eval)
-├── training/
-│   ├── dataset_collator.py          # Dataset loading & ChatML template formatting
-│   ├── train_unsloth.py             # Ultra-fast 16-bit LoRA fine-tuning & response loss masking via Unsloth
-│   └── merge_adapter.py             # Standalone 16-bit merger & direct GGUF (F16/Q4_K_M) export
-│   
-├── runtime/
-│   ├── tools.py                     # 6 consolidated @tool definitions with confirmation gates
-│   ├── agent.py                     # Native OS agent runtime with FedoraFormatBridge
-│   └── test_agent.py                # Local integration & security test suite
-├── README.md
-└── requirements.txt             # Python dependencies
-```
+Powered by **FunctionGemma 270M** and a zero-dependency Python runtime, NanoHat executes system telemetry, systemd daemon recovery, hardware radio control, persistent user memory, and task scheduling without relying on cloud APIs or heavy orchestration frameworks.
 
 ---
 
-## Quickstart Guide
+## The Core Breakthrough: Intent Routing vs. Context Dilution
 
-### 1. One-Line Installer (Recommended)
-```bash
-./install.sh
+In sub-1B parameter models, the primary failure mode is **context dilution**. Exposing a 270M model to 16 complex tool schemas simultaneously saturates its attention window, causing hallucinations, syntax errors, and execution loops.
+
+NanoHat v3.0.0 resolves this through **clean systems architecture rather than brute-force fine-tuning**:
+
+```mermaid
+flowchart TD
+    subgraph S1 ["1. Input & Entrypoint"]
+        Query["User Query\n'Remind me for coffee in 10 minutes'"] --> CLI["nanohat CLI\n(runtime/main.py)"]
+        CLI --> Router["Deterministic Intent Router\n(runtime/router.py)"]
+    end
+
+    subgraph S2 ["2. Cognitive Schema Isolation"]
+        Router -->|"Regex intent match"| ActiveTools["Active Tool Schemas (1-3 tools)\n[task_add, task_list]"]
+        ActiveTools --> PromptGen["Dynamic Prompt Builder\n(runtime/prompts.py)\nInjects ONLY active tool docs (<120 tokens)"]
+    end
+
+    subgraph S3 ["3. Zero-Shot Local Inference"]
+        PromptGen --> Client["Ollama API Client (urllib)\n(runtime/client.py)"]
+        ActiveTools -.->|"Dynamic schema subset"| Client
+        Client --> LLM["FunctionGemma 270M\nStock model | ~600MB active RAM"]
+        LLM -->|"Native tool call control tokens"| ToolCall["tool_calls: task_add(...)"]
+    end
+
+    subgraph S4 ["4. Deterministic OS Execution & Synthesis"]
+        ToolCall --> Engine["Agent Engine\n(runtime/engine.py)"]
+        Engine --> Execution["Pure Python OS Backends\nSQLite WAL | psutil | systemctl | AST"]
+        Execution --> Result["Machine-Checked Tool Output"]
+        Result --> Engine
+        Engine --> LLM
+        LLM --> FinalAnswer["Final Terminal Response"]
+    end
 ```
-Or install directly via pip:
+
+1. **Deterministic Intent Router (`runtime/router.py`):** Pre-compiled regex clusters classify query intent and dynamically prune the active tool catalog down to **1–4 candidate tools** per turn.
+2. **Dynamic Prompt Assembly (`runtime/prompts.py`):** Injects steering instructions *only* for the active tool subset, keeping prompt overhead under 120 tokens.
+3. **Native Control Tokens:** Leverages FunctionGemma's native tool-calling tokens directly out-of-the-box without needing custom fine-tuned weights.
+
+---
+
+## Canonical Tool Surface (16 Tools across 5 Pillars)
+
+| Pillar | Tools | Backend Implementation |
+| :--- | :--- | :--- |
+| **1. Telemetry & Power** | `system_health`, `power_profile` | `psutil` (CPU %, RAM GB/%, battery), `powerprofilesctl` |
+| **2. Hardware & Radios** | `toggle_wifi`, `toggle_bluetooth` | `nmcli radio wifi`, `rfkill` |
+| **3. Services & Daemons** | `service_status`, `restart_service` | `systemctl --user` (with strict security allowlisting) |
+| **4. Persistent Memory** | `memory_set`, `memory_get`, `memory_list`, `memory_delete` | SQLite WAL state engine at `~/.local/state/nanohat/state.db` |
+| **5. Scheduling & Housekeeping** | `task_add`, `task_list`, `task_cancel`, `get_datetime`, `calculator`, `empty_trash` | SQLite WAL tasks, Python AST math parser, `gio trash --empty` |
+
+---
+
+## Quickstart & Installation
+
+### 1. Prerequisites (Ollama)
+Pull the sub-300M FunctionGemma model:
 ```bash
+ollama pull functiongemma
+```
+
+### 2. Install NanoHat Globally
+
+#### Via Pipx (Recommended for CLI isolation):
+```bash
+pipx install git+https://github.com/aetherflow-bit/nanohat-v3.git@v3.0.0
+```
+
+#### Or Local Development Install:
+```bash
+git clone https://github.com/aetherflow-bit/nanohat-v3.git
+cd nanohat-v3
 pip install -e .
 ```
 
-### 2. Run Single-Shot OS Commands
-Execute any query directly from your terminal:
+---
+
+## Usage Examples
+
+### Single-Shot Direct Execution
+Run any command directly from your terminal:
+
 ```bash
-nanohat "What is 15 percent of 800?"
-nanohat "What is my current RAM usage?"
+# System Telemetry & Power
+nanohat "What is my current RAM and CPU usage?"
 nanohat "Check battery status"
-nanohat "Search for Fedora 41 release schedule"
+nanohat "Set power profile to power-saver"
+
+# Hardware & Daemons
+nanohat "Is bluetooth on?"
+nanohat "Turn off wifi"
+nanohat "Status of pipewire"
+nanohat "Restart ollama"
+
+# Persistent Memory (Key-Value Store)
+nanohat "Remember my favorite editor is neovim"
+nanohat "What is my editor?"
+nanohat "List all my memories"
+nanohat "Forget my favorite editor"
+
+# Task Scheduling & Alerts
+nanohat "Remind me for coffee in 10 minutes"
+nanohat "List my pending tasks"
+nanohat "Cancel task 1"
+
+# Utilities & Math
+nanohat "What time is it right now?"
+nanohat "What is 1024 * 768 / 16?"
+nanohat "Empty trash"
 ```
 
-For interactive multi-turn chat:
+### Verbose Mode & Diagnostics
+Inspect the active tools, dynamic prompt, and raw model tool-calls in real-time:
 ```bash
-nanohat --interactive
-```
-
-### 3. Generate Synthetic Training Data (DeepSeek V4 Pro)
-```bash
-# 1. Run 3-batch calibration probe (15 samples)
-export DEEPSEEK_API_KEY="sk-..."
-python -m generator.run_generator --probe
-
-# 2. Run full curriculum generation
-python -m generator.run_generator
-```
-
-### 4. Validate & Canonicalize Dataset
-```bash
-# Validate raw batches and build golden dataset
-python -m validator.validate_dataset
-
-# Create train/eval splits
-python dataset/train_eval_split.py
-```
-
-### 5. Fast Unsloth Fine-Tuning & Export
-```bash
-python -m training.train_unsloth --train-data dataset/validated/train.json --eval-data dataset/validated/eval.json --epochs 5
-```
-
-### 6. Interactive Local Agent
-```bash
-# Run using local Ollama model
-python -m runtime.agent --backend ollama --model nanohat2.1:360m
-
-# Or load directly into PyTorch in-memory weights
-python -m runtime.agent --backend transformers --model training/merged_model
+nanohat --verbose "Check RAM usage"
 ```
 
 ---
 
-## Running Unit & Security Tests
-```bash
-python -m unittest runtime.test_agent
+## Project Architecture
+
+```text
+smollm2-fedora-agent/
+├── runtime/
+│   ├── main.py          # Dual-mode CLI entrypoint & argument parser
+│   ├── router.py        # Regex intent classifier (dynamic tool gating)
+│   ├── prompts.py       # Dynamic system prompt assembler
+│   ├── tools.py         # OpenAI/Ollama compliant tool JSON schemas
+│   ├── engine.py        # Multi-step execution & tool dispatch orchestrator
+│   ├── functions.py     # Pure Python OS implementations & alias resolver
+│   ├── db.py            # SQLite WAL persistent state engine
+│   └── client.py        # Zero-dependency urllib Ollama API chat client
+├── pyproject.toml       # Modern packaging specification
+├── LICENSE              # Apache-2.0
+└── README.md
 ```
+
+---
+
+## Security & Privacy Principles
+
+* **100% Offline & Private:** Zero external HTTP requests, zero telemetry, zero cloud API keys. Runs entirely on your local localhost Ollama server.
+* **No `eval()` Injections:** Mathematical expressions are parsed into an Abstract Syntax Tree (AST) with whitelist-only operators.
+* **Fail-Closed Destructive Gates:** Destructive operations (`empty_trash`) require interactive TTY confirmation.
+* **Concurrency-Safe State:** SQLite WAL mode ensures non-blocking concurrent reads and atomic writes across multiple terminal tabs.
+
+---
+
+## License
+Licensed under the Apache License, Version 2.0.
