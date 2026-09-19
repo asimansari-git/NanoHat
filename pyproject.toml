@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nanohat"
-version = "2.1.0"
-description = "NanoHat: Autonomous Sub-1B Fedora Linux OS Agent powered by SmolLM2-360M"
+version = "3.0.0"
+description = "NanoHat v3: Autonomous Sub-1B Linux OS Agent powered by FunctionGemma-270M"
 readme = "README.md"
 authors = [
     { name = "Asim Ibn Akhlaque" }
@@ -14,19 +14,13 @@ license = { text = "Apache-2.0" }
 requires-python = ">=3.10"
 dependencies = [
     "psutil>=5.9.0",
-    "ddgs>=9.0.0",
-]
-
-[project.optional-dependencies]
-transformers = [
-    "torch>=2.2.0",
-    "transformers>=4.48.0",
-    "accelerate>=0.28.0",
 ]
 
 [project.scripts]
-nanohat = "runtime.agent:main"
+nanohat = "runtime.main:main"
+nanohat-v3 = "runtime.main:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["runtime*", "generator*", "validator*"]
+include = ["runtime*"]
+
