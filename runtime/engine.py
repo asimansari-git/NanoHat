@@ -78,6 +78,9 @@ class AgentEngine:
                 else:
                     func = REGISTRY.get("memory_set")
                     resolved_name = "memory_set"
+            elif "launch" in norm or "open" in norm:
+                func = REGISTRY.get("launch_app")
+                resolved_name = "launch_app"
             elif "task" in norm or "remind" in norm or "todo" in norm:
                 if any(w in norm for w in ["cancel", "del", "remove"]):
                     func = REGISTRY.get("task_cancel")
