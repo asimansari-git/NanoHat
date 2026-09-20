@@ -289,6 +289,24 @@ TASK_CANCEL_TOOL = {
 }
 
 # Master tools catalog
+LAUNCH_APP_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "launch_app",
+        "description": "Launches a GUI application or desktop program on the system.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "app_name": {
+                    "type": "string",
+                    "description": "The exact name of the application or binary to launch (e.g., 'firefox', 'calc', 'gnome-terminal')."
+                }
+            },
+            "required": ["app_name"]
+        }
+    }
+}
+
 ALL_TOOLS = [
     CALCULATOR_TOOL,
     SYSTEM_HEALTH_TOOL,
@@ -305,7 +323,8 @@ ALL_TOOLS = [
     MEMORY_DELETE_TOOL,
     TASK_ADD_TOOL,
     TASK_LIST_TOOL,
-    TASK_CANCEL_TOOL
+    TASK_CANCEL_TOOL,
+    LAUNCH_APP_TOOL
 ]
 
 
