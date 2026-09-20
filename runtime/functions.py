@@ -7,7 +7,9 @@ import shutil
 import subprocess
 from datetime import datetime
 import re
+from typing import Any
 import psutil
+from typing import Any
 try:
     from .db import get_connection, init_db
 except (ImportError, ValueError):
@@ -72,8 +74,15 @@ def calculator(expression: str) -> str:
         expr_clean = expression.strip()
         tree = ast.parse(expr_clean, mode="eval")
         result = _eval_ast(tree)
-        if isinstance(result, float) and result.is_integer():
-            result = int(result)
+        if isinstance(result, float):
+            if result.is_integer() and abs(result) < 1e15:
+                result = int(result)
+            elif abs(result) >= 1e15 or (result != 0 and abs(result) < 1e-4):
+                # Format scientific notation compactly for large/small numbers
+                return f"{result:g}"
+        elif isinstance(result, int):
+            if abs(result) >= 1e15:
+                return f"{float(result):g}"
         return str(result)
     except Exception as e:
         return f"Error: {e}"
@@ -233,6 +242,35 @@ def toggle_bluetooth(state: str = None, action: str = None) -> str:
         return f"Error: Unsupported Bluetooth action '{target}'. Use 'on', 'off', 'toggle', or 'status'."
 
 
+def launch_app(app_name: str = None) -> str:
+    """Launches a GUI application securely, handling .desktop files, headless environments, and injection prevention."""
+    if not app_name or not isinstance(app_name, str):
+        return "ERROR: Invalid application name provided."
+
+    app_name = app_name.strip()
+
+    if not re.match(r'^[\w\-\.]+$', app_name):
+        return f"ERROR[security]: Invalid characters in app name '{app_name}'. Injection prevented."
+
+    if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
+        return f"ERROR[headless]: Cannot launch '{app_name}' without DISPLAY or WAYLAND_DISPLAY set."
+
+    executable = shutil.which(app_name)
+    if not executable:
+        return f"ERROR[missing]: Application '{app_name}' not found."
+
+    try:
+        subprocess.Popen(
+            [executable],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            start_new_session=True
+        )
+        return f"Successfully launched '{app_name}'."
+    except Exception as e:
+        return f"ERROR: Failed to launch '{app_name}': {e}"
+
 def service_status(service_name: str = None, name: str = None) -> str:
     """Inspects whether a systemd user or system service is active, inactive, or failed."""
     svc = (service_name or name or "").strip()
@@ -302,6 +340,9 @@ def restart_service(service_name: str = None, name: str = None) -> str:
     if not svc:
         return "Error: Please specify the service name to restart (e.g. 'pipewire', 'wireplumber')."
 
+    if "/" in svc or "\\" in svc or ".." in svc:
+        return f"ERROR[security_blocked]: Path traversal or slashes in service name '{svc}' are strictly blocked."
+
     clean = os.path.basename(svc)
     if clean in BLOCKED_WAYLAND_SERVICES:
         return f"ERROR[security_blocked]: Restarting '{clean}' is strictly blocked to prevent Wayland desktop session crashes."
@@ -343,6 +384,9 @@ def _match_key(stored_key: str, query_key: str) -> bool:
     if s.endswith(f"_{q}") or q.endswith(f"_{s}"):
         return True
     if s.startswith(f"{q}_") or q.startswith(f"{s}_"):
+        return True
+    # Support pluralization / trailing 's'
+    if s == f"{q}s" or q == f"{s}s":
         return True
     return False
 
@@ -502,6 +546,7 @@ REGISTRY = {
     "task_add": task_add,
     "task_list": task_list,
     "task_cancel": task_cancel,
+    "launch_app": launch_app,
     # Direct Aliases to absorb sub-1B model hallucinations
     "battery_level": system_health,
     "battery_status": system_health,

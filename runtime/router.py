@@ -9,20 +9,21 @@ from typing import List, Dict, Any
 
 # Compiled regex patterns for intent clusters
 RE_DATETIME = re.compile(r"\b(time|date|today|clock|hour|minute|day|month|year|timezone|now)\b", re.IGNORECASE)
-RE_SERVICE_EXPLICIT = re.compile(r"\b(service|services|systemd|daemon|daemons|server|servers|process|processes|unit|units)\b", re.IGNORECASE)
+RE_SERVICE_EXPLICIT = re.compile(r"\b(service|services|systemd|daemon|daemons|server|servers|process|processes|unit|units|ps|killall|pkill)\b", re.IGNORECASE)
 RE_SERVICE_ACTION = re.compile(r"\b(status of|state of|is|check|restart|reload)\s+([a-zA-Z0-9_\-\.]+)\b", re.IGNORECASE)
-RE_NETWORK = re.compile(r"\b(wifi|wi-fi|bluetooth|bt|radio|ssid|network)\b", re.IGNORECASE)
+RE_NETWORK = re.compile(r"\b(wifi|wi-fi|bluetooth|bluetoothctl|bt|radio|ssid|network|wlan[0-9]*|iwconfig)\b", re.IGNORECASE)
 RE_BATTERY_METRICS = re.compile(r"\b(battery|charge|health)\b", re.IGNORECASE)
-RE_CPU_RAM = re.compile(r"\b(cpu|ram|swap|load|core|cores|memory\s+usage|memory\s+status)\b", re.IGNORECASE)
-RE_POWER_PROFILES = re.compile(r"\b(power|profile|profiles|saver|performance)\b", re.IGNORECASE)
-RE_TRASH = re.compile(r"\b(trash|recycle|empty\s+trash|clear\s+trash|bin)\b", re.IGNORECASE)
+RE_CPU_RAM = re.compile(r"\b(cpu|ram|swap|load|core|cores|memory\s+usage|memory\s+status|check\s+memory|hot|warm|overheat|overheating|fan|thermal|thermals|throttling|slow|faster)\b", re.IGNORECASE)
+RE_POWER_PROFILES = re.compile(r"\b(power|profile|profiles|saver|performance|turbostat)\b", re.IGNORECASE)
+RE_TRASH = re.compile(r"\b(trash|recycle|recycling|empty\s+trash|clear\s+trash|bin|recycling\s+bin|recycle\s+bin)\b", re.IGNORECASE)
 RE_MATH_WORDS = re.compile(r"\b(calculate|calc|math|arithmetic|eval|evaluate)\b", re.IGNORECASE)
 RE_MATH_EXPR = re.compile(r"\d+\s*[\+\-\*\/]\s*\d+")
 RE_RAM_WORDS = re.compile(r"\b(ram|usage|used|free|available|gb|mb|swap)\b", re.IGNORECASE)
-RE_MEMORY_WORDS = re.compile(r"\b(remem[a-z]*|remeb[a-z]*|recall[a-z]*|forget[a-z]*|memory|memories|preference|preferences|saved\s+note|saved\s+notes)\b", re.IGNORECASE)
-RE_MEMORY_SET_STATEMENT = re.compile(r"\b((my|mah)\s+([a-zA-Z_\-]+\s+){1,4}is|i\s+am|call\s+me|i\s+like|i\s+prefer)\b", re.IGNORECASE)
+RE_MEMORY_WORDS = re.compile(r"\b(remem[a-z]*|remeb[a-z]*|recall[a-z]*|forget[a-z]*|memory|memories|preference|preferences|saved\s+note|saved\s+notes|note|notes)\b", re.IGNORECASE)
+RE_MEMORY_SET_STATEMENT = re.compile(r"\b((my|mah)\s+(?!laptop|computer|pc|wifi|bluetooth|battery|screen|cpu|ram|fan|temp|sound|audio)([a-zA-Z_\-]+\s+){1,3}is|i\s+am|call\s+me|i\s+like|i\s+prefer)\b", re.IGNORECASE)
 RE_MEMORY_QUERY = re.compile(r"\b(who\s*am\s*i|whoami)\b|(\b(what('s| is| did)|do you remember|do you recall)\b.*\b(my|i|name|distro|editor|preference|favorite|pet)\b)", re.IGNORECASE)
-RE_TASK = re.compile(r"\b(remind|reminder|reminders|task|tasks|schedule|scheduled|alarm|todo|to-do)\b", re.IGNORECASE)
+RE_TASK = re.compile(r"\b(remind|reminder|reminders|task|tasks|schedule|scheduled|alarm|todo|to-do|\bat\b)\b", re.IGNORECASE)
+RE_LAUNCH_APP = re.compile(r"\b(launch|open|start|run)\s+(app|application|program|gui|tool)?\s*([a-zA-Z0-9_\-\.]+)\b", re.IGNORECASE)
 
 STOPWORDS = {
     "the", "a", "an", "my", "your", "this", "that", "today", "now",
@@ -38,6 +39,10 @@ def _is_service_query(q: str) -> bool:
     """Detects if query targets a Linux systemd user service without hardcoding service names."""
     if RE_SERVICE_EXPLICIT.search(q):
         return True
+    # If query targets network radios, do not treat 'up/down' as systemd service unless service explicit
+    has_radio = bool(re.search(r"\b(wifi|wi-fi|bluetooth|bt)\b", q, re.IGNORECASE))
+    if has_radio and not re.search(r"\b(service|systemd|daemon|unit)\b", q, re.IGNORECASE):
+        return False
     for m in RE_SERVICE_ACTION.finditer(q):
         action = m.group(1).lower()
         target = m.group(2).lower()
@@ -90,7 +95,7 @@ def route_tools(query: str, all_tools: List[Dict[str, Any]], max_tools: int = 4)
 
     # 4. Systemd Services & Daemons (Skip if math or purely network query)
     if not is_math and _is_service_query(q):
-        if re.search(r"\b(restart|reload|reboot)\b", q, re.IGNORECASE):
+        if re.search(r"\b(restart|reload|reboot|killall|pkill)\b", q, re.IGNORECASE):
             _add("restart_service")
             _add("service_status")
         else:
@@ -122,7 +127,7 @@ def route_tools(query: str, all_tools: List[Dict[str, Any]], max_tools: int = 4)
         bool(RE_MEMORY_WORDS.search(q)) or
         bool(RE_MEMORY_SET_STATEMENT.search(q)) or
         bool(RE_MEMORY_QUERY.search(q))
-    ) and not has_ram and not any(k in q.lower() for k in ["battery", "cpu", "power", "wifi", "bluetooth", "date", "time"])
+    ) and not has_ram and not any(k in q.lower() for k in ["battery", "cpu", "power", "wifi", "bluetooth", "date", "time", "laptop", "computer", "pc", "fan", "temp", "hot", "process", "processes"])
     if is_mem:
         if re.search(r"\b(forget|delete|remove|clear)\b", q, re.IGNORECASE):
             _add("memory_delete")
@@ -147,6 +152,10 @@ def route_tools(query: str, all_tools: List[Dict[str, Any]], max_tools: int = 4)
         else:
             _add("task_add")
             _add("task_list")
+
+    # 9. App Launcher
+    if RE_LAUNCH_APP.search(q):
+        _add("launch_app")
 
     # Fallback if no specific cluster matched
     if not selected_names:
