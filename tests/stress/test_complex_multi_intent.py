@@ -26,14 +26,12 @@ class TestComplexMultiIntentRouter(unittest.TestCase):
     # CATEGORY 1: Productivity & Utilities (Time, Math, Launch)
     # =========================================================
 
-    @unittest.expectedFailure
     def test_math_short_circuit_limitation(self):
         # Known limitation: Math short-circuits to avoid interference. Expected failure for now.
         # "What time is it right now, and calculate 25 * 4 for my invoice"
         # Since math is isolated unless it matches network/battery/service, get_datetime is skipped.
         self._assert_tools("What time is it right now, and calculate 25 * 4 for my invoice", ["get_datetime", "calculator"])
 
-    @unittest.expectedFailure
     def test_launch_and_math_collision(self):
         # Another known limitation: math string matches "calc", which triggers calculator and skips get_datetime.
         self._assert_tools("What time is it and can you launch calc?", ["get_datetime", "launch_app"])
@@ -82,7 +80,6 @@ class TestComplexMultiIntentRouter(unittest.TestCase):
     # CATEGORY 4: Memory & Persistent Context
     # =========================================================
 
-    @unittest.expectedFailure
     def test_memory_set_and_task(self):
         # Router explicitly ignores memory tools if "laptop", "wifi", etc. are mentioned
         self._assert_tools("Remember that my work laptop is Fedora 41 and remind me to update packages at 6 PM", ["task_add", "task_list", "memory_set"])
@@ -91,7 +88,6 @@ class TestComplexMultiIntentRouter(unittest.TestCase):
         self._assert_tools("What is my favorite editor and open it", ["memory_get", "launch_app"])
         self._assert_tools("Do you recall my pet name and set a reminder to feed him", ["memory_get", "task_add"])
 
-    @unittest.expectedFailure
     def test_memory_and_system(self):
         # Router suppresses memory tools if "power" is mentioned
         self._assert_tools("Remember that I prefer performance mode and switch power profile", ["memory_set", "power_profile"])
@@ -100,7 +96,6 @@ class TestComplexMultiIntentRouter(unittest.TestCase):
     # CATEGORY 5: Edge Cases & False Positives
     # =========================================================
 
-    @unittest.expectedFailure
     def test_memory_false_positive_suppression(self):
         # Known limitation: "laptop" suppresses memory extraction according to router rules,
         # but the actual query structure might trigger memory_set unexpectedly if "laptop" is present but regex allows it.
@@ -131,7 +126,6 @@ class TestComplexMultiIntentRouter(unittest.TestCase):
     # EXTENDED QUERIES TO REACH 35-50 GOAL
     # =========================================================
 
-    @unittest.expectedFailure
     def test_math_short_circuit_additional(self):
         self._assert_tools("What day of the week is it and calculate 10 + 20", ["get_datetime", "calculator"])
         self._assert_tools("Open calculator and what time is it", ["launch_app", "get_datetime"])
@@ -160,7 +154,6 @@ class TestComplexMultiIntentRouter(unittest.TestCase):
         self._assert_tools("Is wifi on and what is the status of docker", ["toggle_wifi", "service_status"])
         self._assert_tools("Connect to wifi and memory that my ssid is HomeNet", ["toggle_wifi", "memory_set"])
 
-    @unittest.expectedFailure
     def test_memory_additional(self):
         self._assert_tools("Remember that my battery is faulty", ["memory_set", "system_health"])
         self._assert_tools("Recall my favorite cpu brand", ["memory_get", "system_health"])

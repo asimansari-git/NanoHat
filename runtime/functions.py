@@ -255,7 +255,27 @@ def launch_app(app_name: str = None) -> str:
     if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
         return f"ERROR[headless]: Cannot launch '{app_name}' without DISPLAY or WAYLAND_DISPLAY set."
 
-    executable = shutil.which(app_name)
+    APP_ALIASES = {
+        "calc": "gnome-calculator",
+        "calculator": "gnome-calculator",
+        "kcalc": "kcalc",
+        "vscode": "code",
+        "browser": "firefox",
+        "terminal": "gnome-terminal",
+        "files": "nautilus",
+        "file-manager": "nautilus",
+        "editor": "gedit",
+        "text-editor": "gnome-text-editor",
+        "music": "rhythmbox",
+        "player": "vlc",
+        "intellij": "idea",
+        "idea": "idea",
+        "slack": "slack",
+        "thunderbird": "thunderbird",
+    }
+    app_key = app_name.lower().strip()
+    target_bin = APP_ALIASES.get(app_key, app_name)
+    executable = shutil.which(target_bin) or shutil.which(app_name)
     if not executable:
         return f"ERROR[missing]: Application '{app_name}' not found."
 

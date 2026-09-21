@@ -36,7 +36,6 @@ class TestMultilingualSwitching(unittest.TestCase):
         self.check_routing("Ollama service ka status kya hai?", ["service_status"])
         self.check_routing("Docker daemon check karo", ["service_status"])
 
-    @unittest.expectedFailure
     def test_hinglish_memory_expected_failures(self):
         # 'yaad rakhna' / 'yaad rakh' are not in English memory patterns.
         # Fails because no loan words for memory trigger it, goes to fallback.
@@ -94,7 +93,6 @@ class TestMultilingualSwitching(unittest.TestCase):
         self.check_routing("Añade un reminder para las 5", ["task_add"])
         self.check_routing("Muestra los tasks pendientes", ["task_list"])
 
-    @unittest.expectedFailure
     def test_spanglish_tasks_expected_failures(self):
         # 'Cancela', 'Borra' miss 'cancel', 'delete' word boundaries
         self.check_routing("Cancela el task numero 2", ["task_cancel"])
@@ -126,7 +124,6 @@ class TestMultilingualSwitching(unittest.TestCase):
         self.check_routing("Que time es?", ["get_datetime"])
         self.check_routing("Launch the app terminal", ["launch_app"])
 
-    @unittest.expectedFailure
     def test_spanglish_launch_expected_failures(self):
         # 'Abre' misses 'launch/open/start'
         self.check_routing("Abre firefox", ["launch_app"])

@@ -76,7 +76,6 @@ class TestPersonaGenX(unittest.TestCase):
             self.assertIn("system_health", names, f"Query '{q}' failed to route to system_health. Got {names}")
             self.assertLessEqual(len(tools), 4)
 
-    @unittest.expectedFailure
     def test_formal_networking(self):
         queries = [
             "Could you please establish a connection to the local Wi-Fi network for me?",

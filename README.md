@@ -1,4 +1,4 @@
-# 🎩 NanoHat v3.0.0: Autonomous Sub-300M Linux OS Agent
+# 🎩 NanoHat v3.1.0: Autonomous Sub-300M Linux OS Agent
 
 > *"Fine-tuning is the last resort. First, try all methods of systems engineering."*
 
@@ -17,7 +17,7 @@ Powered by **FunctionGemma 270M** and a zero-dependency Python runtime, NanoHat 
 
 In sub-1B parameter models, the primary failure mode is **context dilution**. Exposing a 270M model to 16 complex tool schemas simultaneously saturates its attention window, causing hallucinations, syntax errors, and execution loops.
 
-NanoHat v3.0.0 resolves this through **clean systems architecture rather than brute-force fine-tuning**:
+NanoHat v3.1.0 resolves this through **clean systems architecture rather than brute-force fine-tuning**:
 
 ```mermaid
 flowchart TD
@@ -78,7 +78,7 @@ ollama pull functiongemma
 
 #### Via Pipx (Recommended for CLI isolation):
 ```bash
-pipx install git+https://github.com/aetherflow-bit/nanohat-v3.git@v3.0.0
+pipx install git+https://github.com/aetherflow-bit/nanohat-v3.git@v3.1.0
 ```
 
 #### Or Local Development Install:
