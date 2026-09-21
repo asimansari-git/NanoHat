@@ -7,8 +7,7 @@ from runtime.router import route_tools, FALLBACK_TOOL_NAMES
 
 # 40 Casual User Queries with typos, slang, and vague requests
 TEST_CASES = [
-    # Telemetry & Power
-    pytest.param("my laptop is getting hot fix it", ["power_profile", "system_health"], marks=pytest.mark.xfail(reason="False positive on memory_set ('my laptop is')")),
+    ("my laptop is getting hot fix it", ["power_profile", "system_health"]),
     ("can u check how much juice my battery has", ["system_health"]),
     ("y is my computer so slow??", ["system_health", "power_profile"]),
     ("make it go faster", ["power_profile"]),

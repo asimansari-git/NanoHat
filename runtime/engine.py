@@ -26,6 +26,7 @@ class AgentEngine:
         self.prompt_version = prompt_version
         self.system_prompt = get_system_prompt(prompt_version)
         self.verbose = verbose
+        self.history: List[Dict[str, Any]] = []
 
     def _log(self, prefix: str, message: str):
         if self.verbose:
@@ -113,8 +114,8 @@ class AgentEngine:
 
     def run(self, user_query: str) -> str:
         """Run full turn: dynamic route -> dynamic prompt -> model -> tool calls -> response."""
-        # Step 0: Dynamic tool gating and dynamic prompt assembly
-        active_tools = route_tools(user_query, ALL_TOOLS)
+        # Step 0: Dynamic tool gating and dynamic prompt assembly with conversational history
+        active_tools = route_tools(user_query, ALL_TOOLS, history=self.history)
         active_tool_names = [t.get("function", {}).get("name") for t in active_tools]
         turn_system_prompt = get_dynamic_prompt(active_tool_names, version=self.prompt_version)
 
@@ -136,10 +137,14 @@ class AgentEngine:
         if not tool_calls:
             content = message.get("content", "")
             self._log("DIRECT_RESPONSE", "Model responded without tool call.")
+            self.history.append({"role": "user", "content": user_query})
+            self.history.append(message)
             return content
 
         # Append assistant message with tool calls
         messages.append(message)
+        self.history.append({"role": "user", "content": user_query})
+        self.history.append(message)
 
         # Step 3: Execute tool calls and collect responses
         for tc in tool_calls:
@@ -153,15 +158,18 @@ class AgentEngine:
                     pass
 
             output = self.execute_tool(name, args)
-            messages.append({
+            tool_msg = {
                 "role": "tool",
                 "name": name,
                 "content": output
-            })
+            }
+            messages.append(tool_msg)
+            self.history.append(tool_msg)
 
         # Step 4: Final synthesis step
         self._log("SYNTHESIS", "Sending tool results back to model for final synthesis...")
         final_response = self.client.chat(messages=messages, tools=active_tools)
         final_content = final_response.get("message", {}).get("content", "")
+        self.history.append(final_response.get("message", {}))
 
         return final_content

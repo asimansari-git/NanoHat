@@ -92,7 +92,6 @@ class TestComplexImplicitMath(unittest.TestCase):
     def test_expected_fail_time_math_hours(self):
         self._check_router_has_calculator("How many hours in 4500 minutes?")
 
-    @unittest.expectedFailure
     def test_expected_fail_task_math(self):
         # Fails because 'remind' triggers task_add exclusively
         self._check_router_has_calculator("Remind me to add 50 and 80 together")

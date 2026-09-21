@@ -20,19 +20,19 @@
 | 2 | 87 | `system_health` | `calculator, system_health` | OK |
 | 3 | 283 | `memory_set` | `calculator, system_health, task_list, task_add` | ERROR |
 | 4 | 85 | `calculator` | `calculator, system_health` | OK |
-| 5 | 309 | `calculator` | `calculator` | OK |
+| 5 | 309 | `calculator` | `calculator, get_datetime, empty_trash, task_list` | OK |
 | 6 | 237 | `task_add` | `get_datetime, empty_trash, task_list, task_add` | OK |
 | 7 | 231 | `system_health` | `get_datetime, system_health, empty_trash, task_list` | OK |
 | 8 | 216 | `memory_set` | `get_datetime, empty_trash, task_list, task_add` | ERROR |
 | 9 | 278 | `task_add` | `calculator, get_datetime, system_health, empty_trash` | ERROR |
-| 10 | 303 | `memory_set` | `service_status, restart_service, task_list, task_add` | ERROR |
+| 10 | 303 | `memory_set` | `service_status, restart_service, memory_delete, task_list` | ERROR |
 | 11 | 203 | `task_add` | `service_status, restart_service, task_add, task_list` | OK |
 | 12 | 277 | `calculator` | `calculator, get_datetime, system_health, empty_trash` | OK |
 | 13 | 298 | `calculator` | `calculator, get_datetime, system_health, empty_trash` | OK |
 | 14 | 259 | `get_datetime` | `calculator, get_datetime, system_health` | OK |
 | 15 | 197 | `task_add` | `calculator, get_datetime, system_health, empty_trash` | ERROR |
 | 16 | 295 | `empty_trash` | `calculator, get_datetime, system_health, empty_trash` | OK |
-| 17 | 362 | `calculator` | `calculator` | OK |
+| 17 | 362 | `calculator` | `calculator, get_datetime, task_list, task_add` | OK |
 | 18 | 215 | `toggle_wifi` | `get_datetime, toggle_wifi, service_status, restart_service` | OK |
 | 19 | 216 | `get_datetime` | `get_datetime, service_status, restart_service, task_add` | OK |
 | 20 | 184 | `calculator` | `calculator, get_datetime, system_health, empty_trash` | OK |
@@ -45,7 +45,7 @@
 | 27 | 165 | `restart_service` | `calculator, system_health` | ERROR |
 | 28 | 217 | `task_add` | `get_datetime, empty_trash, task_list, task_add` | OK |
 | 29 | 140 | `get_datetime` | `get_datetime, task_add, task_list` | OK |
-| 30 | 222 | `memory_set` | `get_datetime, empty_trash, task_list, task_add` | ERROR |
+| 30 | 222 | `memory_set` | `get_datetime, empty_trash, memory_delete, task_list` | ERROR |
 | 31 | 86 | `empty_trash` | `calculator, system_health, empty_trash` | OK |
 | 32 | 279 | `toggle_wifi` | `get_datetime, toggle_wifi, service_status, restart_service` | OK |
 | 33 | 220 | `restart_service` | `calculator, get_datetime, system_health, task_add` | ERROR |
@@ -54,7 +54,7 @@
 | 36 | 335 | `calculator` | `get_datetime, empty_trash, task_list, task_add` | ERROR |
 | 37 | 230 | `toggle_wifi` | `toggle_wifi, task_list, task_add` | OK |
 | 38 | 223 | `system_health` | `get_datetime, system_health, empty_trash, task_list` | OK |
-| 39 | 322 | `calculator` | `calculator` | OK |
+| 39 | 322 | `calculator` | `calculator, get_datetime, empty_trash, task_list` | OK |
 | 40 | 318 | `empty_trash` | `calculator, get_datetime, system_health, empty_trash` | OK |
 
 ## Critical Context Failures & Truncation Anomalies Discovered
@@ -66,7 +66,7 @@ kernel: Command line: BO...'
   - **Context excerpt:** 'Listen, I don't mean to rant, but the way this project is being managed is an absolute disaster. The...'
 - **Target:** `task_add` was missed. Routed: `['calculator', 'get_datetime', 'system_health', 'empty_trash']`.
   - **Context excerpt:** 'Listen, I don't mean to rant, but the way this project is being managed is an absolute disaster. The...'
-- **Target:** `memory_set` was missed. Routed: `['service_status', 'restart_service', 'task_list', 'task_add']`.
+- **Target:** `memory_set` was missed. Routed: `['service_status', 'restart_service', 'memory_delete', 'task_list']`.
   - **Context excerpt:** 'The sociological implications of a heavily networked society have been debated since the inception o...'
 - **Target:** `task_add` was missed. Routed: `['calculator', 'get_datetime', 'system_health', 'empty_trash']`.
   - **Context excerpt:** 'Listen, I don't mean to rant, but the way this project is being managed is an absolute disaster. The...'
@@ -76,7 +76,7 @@ kernel: Command line: BO...'
   - **Context excerpt:** 'Journalctl log output follows:
 kernel: Linux version 6.1.18-200.fc37.x86_64
 kernel: Command line: BO...'
-- **Target:** `memory_set` was missed. Routed: `['get_datetime', 'empty_trash', 'task_list', 'task_add']`.
+- **Target:** `memory_set` was missed. Routed: `['get_datetime', 'empty_trash', 'memory_delete', 'task_list']`.
   - **Context excerpt:** 'You know, I remember when I first got my dog, a golden retriever named Buster. He was so small he co...'
 - **Target:** `restart_service` was missed. Routed: `['calculator', 'get_datetime', 'system_health', 'task_add']`.
   - **Context excerpt:** 'You know, I remember when I first got my dog, a golden retriever named Buster. He was so small he co...'

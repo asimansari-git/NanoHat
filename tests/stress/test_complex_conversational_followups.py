@@ -153,7 +153,6 @@ class TestComplexConversationalFollowups(unittest.TestCase):
         self.assertIn("calculator", [t["function"]["name"] for t in route_tools("Evaluate 100 / 4", ALL_TOOLS)])
         self.assertIn("calculator", [t["function"]["name"] for t in route_tools("Calculate 25 * 4", ALL_TOOLS)])
 
-    @unittest.expectedFailure
     def test_routing_sequence_15_math2_xfail(self):
         self.assertEqual(len(route_tools("Divide that by 5", ALL_TOOLS)), 1)
 
@@ -209,7 +208,6 @@ class TestComplexConversationalFollowups(unittest.TestCase):
         self.assertIn("calculator", [t["function"]["name"] for t in route_tools("50 - 20", ALL_TOOLS)])
         self.assertIn("calculator", [t["function"]["name"] for t in route_tools("30 * 2", ALL_TOOLS)])
 
-    @unittest.expectedFailure
     def test_routing_sequence_22_math3_xfail(self):
         self.assertEqual(len(route_tools("Divide that by 5", ALL_TOOLS)), 1)
 
@@ -393,7 +391,6 @@ class TestComplexConversationalFollowups(unittest.TestCase):
         self.assertIn("calculator", [t["function"]["name"] for t in route_tools("Math 50 / 2", ALL_TOOLS)])
         self.assertIn("calculator", [t["function"]["name"] for t in route_tools("Arithmetic 8 * 9", ALL_TOOLS)])
 
-    @unittest.expectedFailure
     def test_routing_sequence_45_math5_xfail(self):
         self.assertEqual(len(route_tools("Divide that by 5", ALL_TOOLS)), 1)
 
