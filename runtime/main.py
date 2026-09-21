@@ -19,7 +19,7 @@ except (ImportError, ValueError):
 def main():
     parser = argparse.ArgumentParser(
         prog="nanohat",
-        description="🎩 NanoHat v3.0.0 — Autonomous Linux OS Agent (FunctionGemma 270M)",
+        description="🎩 NanoHat v3.1.0 — Autonomous Linux OS Agent (FunctionGemma 270M)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""Examples:
   nanohat "What is 45 * 12?"
@@ -34,7 +34,7 @@ def main():
     )
     parser.add_argument("query", nargs="?", type=str, help="User query or instruction")
     parser.add_argument("-p", "--prompt", type=str, help="User query/prompt (flag syntax)")
-    parser.add_argument("-V", "--version", action="version", version="%(prog)s v3.0.0 (FunctionGemma 270M)")
+    parser.add_argument("-V", "--version", action="version", version="%(prog)s v3.1.0 (FunctionGemma 270M)")
     parser.add_argument("-pv", "--prompt-version", type=str, default=DEFAULT_VERSION, choices=list(PROMPTS.keys()),
                         help=f"System prompt version (default: {DEFAULT_VERSION})")
     parser.add_argument("--model", type=str, default="functiongemma:latest",

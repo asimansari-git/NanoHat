@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nanohat"
-version = "3.0.0"
+version = "3.1.0"
 description = "NanoHat v3: Autonomous Sub-1B Linux OS Agent powered by FunctionGemma-270M"
 readme = "README.md"
 authors = [

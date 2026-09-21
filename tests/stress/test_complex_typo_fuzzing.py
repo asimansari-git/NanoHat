@@ -206,7 +206,6 @@ class TestComplexTypoFuzzing(unittest.TestCase):
         q = "hu m i"
         self.assertToolIn("memory_get", route_tools(q, ALL_TOOLS), q)
 
-    @unittest.expectedFailure
     def test_extreme_memory_set(self):
         q = "mi nm is b0b"
         self.assertToolIn("memory_set", route_tools(q, ALL_TOOLS), q)

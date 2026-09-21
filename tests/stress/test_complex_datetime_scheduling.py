@@ -70,7 +70,6 @@ class TestComplexDateTimeScheduling(unittest.TestCase):
         names = get_tool_names(query)
         self.assertIn("task_list", names)
 
-    @unittest.expectedFailure
     def test_cancel_meeting_tomorrow(self):
         # "meeting" doesn't have "remind", "task", etc. so this might fail
         query = "Cancel my meeting for tomorrow morning"
@@ -102,7 +101,6 @@ class TestComplexDateTimeScheduling(unittest.TestCase):
         names = get_tool_names(query)
         self.assertIn("task_cancel", names)
 
-    @unittest.expectedFailure
     def test_task_add_specific_date(self):
         # The query contains '2024-11-05', triggering CALCULATOR_TOOL instead of TASK due to routing issues
         query = "Add a to-do for 2024-11-05: vote"
@@ -255,7 +253,6 @@ class TestComplexDateTimeScheduling(unittest.TestCase):
         names = get_tool_names(query)
         self.assertIn("task_list", names)
 
-    @unittest.expectedFailure
     def test_xfail_implicit_task_add_ambiguous(self):
         # "Push my meeting to later" implies task edit/cancel/add
         query = "Push my meeting to later"

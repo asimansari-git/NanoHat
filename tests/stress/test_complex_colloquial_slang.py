@@ -17,11 +17,9 @@ class TestComplexColloquialSlang(unittest.TestCase):
 
     # --- British / Commonwealth ---
 
-    @unittest.expectedFailure
     def test_british_dustbin(self):
         self.assert_tools("Fancy emptying the dustbin mate?", ["empty_trash"])
 
-    @unittest.expectedFailure
     def test_british_wireless(self):
         self.assert_tools("Turn off the wireless interface", ["toggle_wifi"])
 
@@ -40,7 +38,6 @@ class TestComplexColloquialSlang(unittest.TestCase):
     def test_british_crank_up_performance(self):
         self.assert_tools("Oi, crank up the performance profile", ["power_profile"])
 
-    @unittest.expectedFailure
     def test_british_blue_teeth(self):
         self.assert_tools("Switch on the blue-teeth", ["toggle_bluetooth"])
 
@@ -58,7 +55,6 @@ class TestComplexColloquialSlang(unittest.TestCase):
     def test_australian_brekkie_task(self):
         self.assert_tools("Chuck this task in my list: grab brekkie tomorrow", ["task_add"])
 
-    @unittest.expectedFailure
     def test_australian_interwebs(self):
         self.assert_tools("Turn on the interwebs", ["toggle_wifi"])
 
@@ -66,7 +62,6 @@ class TestComplexColloquialSlang(unittest.TestCase):
     def test_australian_juice(self):
         self.assert_tools("Check the juice level", ["battery"]) # No explicit battery word, routes to default
 
-    @unittest.expectedFailure
     def test_australian_garbo(self):
         self.assert_tools("Empty the garbo", ["empty_trash"])
 
@@ -79,7 +74,6 @@ class TestComplexColloquialSlang(unittest.TestCase):
     def test_australian_warm_rig(self):
         self.assert_tools("My rig's getting warm", ["system_health"])
 
-    @unittest.expectedFailure
     def test_australian_fire_up_browser(self):
         self.assert_tools("Fire up the browser", ["launch_app"])
 
@@ -94,7 +88,6 @@ class TestComplexColloquialSlang(unittest.TestCase):
     def test_american_trash_can(self):
         self.assert_tools("Trash can is overflowing, dump it", ["empty_trash"])
 
-    @unittest.expectedFailure
     def test_american_fire_up_terminal(self):
         self.assert_tools("Fire up terminal", ["launch_app"])
 
@@ -114,7 +107,6 @@ class TestComplexColloquialSlang(unittest.TestCase):
     def test_american_remember_hamburger(self):
         self.assert_tools("Remember that I love hamburgers", ["memory_set"])
 
-    @unittest.expectedFailure
     def test_american_boot_up_firefox(self):
         self.assert_tools("Boot up firefox", ["launch_app"])
 
@@ -131,7 +123,6 @@ class TestComplexColloquialSlang(unittest.TestCase):
     def test_indian_do_calculation(self):
         self.assert_tools("Do one calculation: 450 divided by 3", ["calculator"])
 
-    @unittest.expectedFailure
     def test_indian_wastebasket(self):
         self.assert_tools("Please clear the wastebasket", ["empty_trash"])
 
@@ -141,7 +132,6 @@ class TestComplexColloquialSlang(unittest.TestCase):
     def test_indian_date(self):
         self.assert_tools("What's the date?", ["get_datetime"])
 
-    @unittest.expectedFailure
     def test_indian_heating_up(self):
         self.assert_tools("My PC is heating up too much", ["system_health"])
 
