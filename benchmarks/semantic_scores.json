@@ -1,0 +1,39 @@
+{
+  "router": "Semantic Router (BGE-small-en-v1.5)",
+  "total_queries": 80,
+  "overall_top1_accuracy": 77.5,
+  "overall_top3_accuracy": 93.75,
+  "latency_p50_ms": 11.118,
+  "latency_p95_ms": 14.215,
+  "latency_mean_ms": 11.669,
+  "tiers": {
+    "direct": {
+      "total": 20,
+      "top1_pct": 100.0,
+      "top3_pct": 100.0,
+      "latency_p50_ms": 11.826,
+      "latency_p95_ms": 19.293
+    },
+    "slang_typo": {
+      "total": 20,
+      "top1_pct": 70.0,
+      "top3_pct": 90.0,
+      "latency_p50_ms": 10.908,
+      "latency_p95_ms": 13.067
+    },
+    "implicit": {
+      "total": 20,
+      "top1_pct": 80.0,
+      "top3_pct": 90.0,
+      "latency_p50_ms": 11.293,
+      "latency_p95_ms": 14.012
+    },
+    "adversarial": {
+      "total": 20,
+      "top1_pct": 60.0,
+      "top3_pct": 95.0,
+      "latency_p50_ms": 10.872,
+      "latency_p95_ms": 13.289
+    }
+  }
+}

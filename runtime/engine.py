@@ -21,11 +21,31 @@ except (ImportError, ValueError):
 
 
 class AgentEngine:
-    def __init__(self, client: OllamaClient, prompt_version: str = "v1", verbose: bool = False):
+    def __init__(
+        self,
+        client: OllamaClient,
+        prompt_version: str = "v1",
+        verbose: bool = False,
+        router: str = "regex",
+        router_fn: Any = None,
+    ):
         self.client = client
         self.prompt_version = prompt_version
         self.system_prompt = get_system_prompt(prompt_version)
         self.verbose = verbose
+        self.router_type = router
+
+        if router_fn is not None:
+            self.router_fn = router_fn
+        elif str(router).lower() == "semantic":
+            try:
+                from .semantic_router import route_tools as semantic_route_tools
+            except (ImportError, ValueError):
+                from semantic_router import route_tools as semantic_route_tools
+            self.router_fn = semantic_route_tools
+        else:
+            self.router_fn = route_tools
+
         self.history: List[Dict[str, Any]] = []
 
     def _log(self, prefix: str, message: str):
@@ -115,7 +135,7 @@ class AgentEngine:
     def run(self, user_query: str) -> str:
         """Run full turn: dynamic route -> dynamic prompt -> model -> tool calls -> response."""
         # Step 0: Dynamic tool gating and dynamic prompt assembly with conversational history
-        active_tools = route_tools(user_query, ALL_TOOLS, history=self.history)
+        active_tools = self.router_fn(user_query, ALL_TOOLS, history=self.history)
         active_tool_names = [t.get("function", {}).get("name") for t in active_tools]
         turn_system_prompt = get_dynamic_prompt(active_tool_names, version=self.prompt_version)
 
