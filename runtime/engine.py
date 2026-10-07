@@ -5,10 +5,16 @@ import json
 import re
 from typing import List, Dict, Any
 
-from runtime.client import OllamaClient
-from runtime.functions import REGISTRY
-from runtime.tools import ALL_TOOLS
-from runtime.prompts import get_system_prompt
+try:
+    from runtime.client import OllamaClient
+    from runtime.functions import REGISTRY
+    from runtime.tools import ALL_TOOLS
+    from runtime.prompts import get_system_prompt
+except (ImportError, ModuleNotFoundError):
+    from client import OllamaClient
+    from functions import REGISTRY
+    from tools import ALL_TOOLS
+    from prompts import get_system_prompt
 
 ARG_ALIASES = {
     "system_health": {"type": "metric", "target": "metric"},
@@ -41,7 +47,6 @@ class AgentEngine:
 
         # Catch power_profile misfires
         if tool_name == "power_profile":
-            # 1. Radio misfires (e.g. "Is Wi-Fi turned on?" caught by "turned on")
             if any(w in q_lower for w in ["wifi", "wi-fi"]):
                 tool_name = "toggle_wifi"
                 is_question = bool(re.search(r"^(is|check|what|are)\b", q_lower.strip()))
@@ -50,10 +55,9 @@ class AgentEngine:
                 tool_name = "toggle_bluetooth"
                 is_question = bool(re.search(r"^(is|check|what|are)\b", q_lower.strip()))
                 normalized = {"state": "status" if is_question else ("off" if "off" in q_lower else "on")}
-            # 2. Telemetry misfires (e.g. "Check CPU load" or "Laptop is hot")
             else:
                 is_telemetry = any(k in q_lower for k in ["cpu", "ram", "memory", "load", "hot", "temp", "usage"])
-                has_profile_kw = any(p in q_lower for p in ["profile", "performance", "power-saver", "balanced"])
+                has_profile_kw = any(p in q_lower for p in ["profile", "performance", "power-saver", "powersaver", "saver", "balanced"])
                 if is_telemetry and not has_profile_kw:
                     tool_name = "system_health"
                     normalized = {"metric": "ram" if any(r in q_lower for r in ["ram", "memory"]) else "cpu"}
@@ -81,11 +85,11 @@ class AgentEngine:
             elif "balanced" in q_lower:
                 normalized["action"] = "set"
                 normalized["profile"] = "balanced"
-            elif any(w in q_lower for w in ["active", "current", "what", "check", "get"]):
+            elif any(w in q_lower for w in ["active", "current", "what", "check", "get", "status"]):
                 normalized["action"] = "get"
                 normalized.pop("profile", None)
 
-        # Ensure question-form queries stay in read-only status
+        # Ensure question-form queries default to status
         if tool_name in ["toggle_wifi", "toggle_bluetooth"]:
             is_question = bool(re.search(r"^(is|check|what|are)\b", q_lower.strip()))
             has_explicit_change = any(w in q_lower for w in ["turn on", "turn off", "switch on", "switch off", "disable", "enable"])
@@ -133,7 +137,6 @@ class AgentEngine:
         tool_calls = message.get("tool_calls", [])
 
         if not tool_calls:
-            # Fallback if model still attempts conversational refusal on battery/hardware
             q_lower = user_query.lower()
             if any(w in q_lower for w in ["battery", "batt", "juice"]):
                 output = self.execute_tool("system_health", {"metric": "battery"}, query=user_query)
@@ -145,6 +148,16 @@ class AgentEngine:
             self.history.append({"role": "user", "content": user_query})
             self.history.append(message)
             return content or "No operation was requested."
+
+        # Filter out spurious radio co-invocations when query targets only one
+        if len(tool_calls) > 1:
+            q_low = user_query.lower()
+            has_wifi = any(w in q_low for w in ["wifi", "wi-fi"])
+            has_bt = any(w in q_low for w in ["bluetooth", "bt", "blue-teeth"])
+            if has_wifi and not has_bt:
+                tool_calls = [tc for tc in tool_calls if tc.get("function", {}).get("name") != "toggle_bluetooth"]
+            elif has_bt and not has_wifi:
+                tool_calls = [tc for tc in tool_calls if tc.get("function", {}).get("name") != "toggle_wifi"]
 
         self.history.append({"role": "user", "content": user_query})
         self.history.append(message)
