@@ -59,8 +59,13 @@ screenshot.png
 # Logs & Temporary Files
 *.log
 grounding/*.json
+chaos_results.json
+gen_z_test_results.json
+reports_data.json
 dataset/
 
 # Obsidian Vault / Task Planning Artifacts
-.notes/
+.nanohat/
 
+
+dataset/
