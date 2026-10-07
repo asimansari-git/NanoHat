@@ -1,165 +1,179 @@
-# 🎩 NanoHat v3.1.0: Autonomous Sub-300M Linux OS Agent
+# 🎩 NanoHat v3.1.0: Autonomous Sub-300M Linux OS Copilot
 
 > *"Fine-tuning is the last resort. First, try all methods of systems engineering."*
 
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Platform: Linux (Fedora)](https://img.shields.io/badge/Platform-Fedora%20%2F%20Linux-navy.svg)](#)
-[![Model: FunctionGemma-270M](https://img.shields.io/badge/Model-FunctionGemma--270M-red.svg)](#)
-[![Memory: ~600MB RAM](https://img.shields.io/badge/RAM-~600MB-green.svg)](#)
-
-**NanoHat** is an ultra-lightweight, offline-first autonomous OS agent that runs locally with **sub-second CPU latency** and a **~600MB RAM footprint**. 
-
-Powered by **FunctionGemma 270M** and a zero-dependency Python runtime, NanoHat executes system telemetry, systemd daemon recovery, hardware radio control, persistent user memory, and task scheduling without relying on cloud APIs or heavy orchestration frameworks.
+**NanoHat** is an ultra-lightweight, offline autonomous Linux system copilot running on Fedora Workstation. Powered by **FunctionGemma 270M** and a zero-dependency Python runtime, NanoHat bridges the gap between natural language symptoms and low-level Linux administration. It diagnoses system health, controls hardware radios, manages power profiles, and recovers failed systemd user services without cloud dependencies, complex orchestration frameworks, or heavy router overhead.
 
 ---
 
-## The Core Breakthrough: Intent Routing vs. Context Dilution
+## Architecture: Direct-Dispatch vs. Cognitive Dilution
 
-In sub-1B parameter models, the primary failure mode is **context dilution**. Exposing a 270M model to 16 complex tool schemas simultaneously saturates its attention window, causing hallucinations, syntax errors, and execution loops.
+In sub-1B parameter models like FunctionGemma 270M, traditional agent frameworks break down for two reasons:
 
-NanoHat v3.1.0 resolves this through **clean systems architecture rather than brute-force fine-tuning**:
+* **Context Dilution:** Large tool surfaces overload the model's limited attention window, resulting in parameter dropping and schema confusion.
+* **Synthesis Looping:** Re-prompting a 270M function-calling checkpoint with tool results to synthesize conversational dialogue leads to empty responses, conversational refusals, or infinite tool calls.
+
+NanoHat v3.1.0 bypasses routing layers and synthesis loops entirely. It presents a static, hardened catalog of 6 core system tools directly to the model and executes an immediate, deterministic dispatch:
 
 ```mermaid
 flowchart TD
     subgraph S1 ["1. Input & Entrypoint"]
-        Query["User Query\n'Remind me for coffee in 10 minutes'"] --> CLI["nanohat CLI\n(runtime/main.py)"]
-        CLI --> Router["Deterministic Intent Router\n(runtime/router.py)"]
+        Query["User Query\n'My sound glitched out, restart pipewire'"] --> CLI["nanohat CLI\n(runtime/main.py)"]
     end
 
-    subgraph S2 ["2. Cognitive Schema Isolation"]
-        Router -->|"Regex intent match"| ActiveTools["Active Tool Schemas (1-3 tools)\n[task_add, task_list]"]
-        ActiveTools --> PromptGen["Dynamic Prompt Builder\n(runtime/prompts.py)\nInjects ONLY active tool docs (<120 tokens)"]
+    subgraph S2 ["2. Schema Constraints & Temporal Injection"]
+        CLI --> PromptGen["Base Prompt & Clock Grounding\n(runtime/prompts.py)\nInjects dynamic system timestamp"]
+        CLI --> Catalog["Hardened 6-Tool Catalog\n(runtime/tools.py)\nStrict enum & parameter constraints"]
     end
 
-    subgraph S3 ["3. Zero-Shot Local Inference"]
-        PromptGen --> Client["Ollama API Client (urllib)\n(runtime/client.py)"]
-        ActiveTools -.->|"Dynamic schema subset"| Client
-        Client --> LLM["FunctionGemma 270M\nStock model | ~600MB active RAM"]
-        LLM -->|"Native tool call control tokens"| ToolCall["tool_calls: task_add(...)"]
+    subgraph S3 ["3. Single-Turn Tool Invocation"]
+        PromptGen --> Client["Ollama API Client\n(runtime/client.py)"]
+        Catalog --> Client
+        Client --> LLM["FunctionGemma 270M\nLocalhost Ollama | ~600MB active RAM"]
+        LLM -->|"Grammar-constrained control tokens"| ToolCall["tool_calls: restart_service(service_name='pipewire')"]
     end
 
-    subgraph S4 ["4. Deterministic OS Execution & Synthesis"]
+    subgraph S4 ["4. Deterministic Execution & Output"]
         ToolCall --> Engine["Agent Engine\n(runtime/engine.py)"]
-        Engine --> Execution["Pure Python OS Backends\nSQLite WAL | psutil | systemctl | AST"]
-        Execution --> Result["Machine-Checked Tool Output"]
-        Result --> Engine
-        Engine --> LLM
-        LLM --> FinalAnswer["Final Terminal Response"]
+        Engine --> Normalizer["Defensive Argument Normalization\nAliases & Read/Write boundary guards"]
+        Normalizer --> Execution["Pure Python OS Backends\n(runtime/functions.py)\nsystemctl | powerprofilesctl | nmcli | psutil"]
+        Execution --> DirectOutput["Immediate Formatted Output\n(No LLM re-prompting)"]
     end
+
 ```
 
-1. **Deterministic Intent Router (`runtime/router.py`):** Pre-compiled regex clusters classify query intent and dynamically prune the active tool catalog down to **1–4 candidate tools** per turn.
-2. **Dynamic Prompt Assembly (`runtime/prompts.py`):** Injects steering instructions *only* for the active tool subset, keeping prompt overhead under 120 tokens.
-3. **Native Control Tokens:** Leverages FunctionGemma's native tool-calling tokens directly out-of-the-box without needing custom fine-tuned weights.
+* **Zero-Router Direct Dispatch:** Evaluates the entire 6-tool catalog directly within the model's native attention budget, eliminating routing drift and vector embedding overhead.
+* **Dynamic Temporal Grounding:** Injects the live host timestamp into the prompt on every turn, eliminating temporal hallucinations without consuming a tool slot.
+* **Deterministic Execution Loop:** Intercepts function calls and returns templated system output directly to the terminal, bypassing model re-prompting.
+* **Defensive Parameter Normalization:** Sanitizes argument aliases and isolates read-only telemetry queries from destructive actions.
 
 ---
 
-## Canonical Tool Surface (16 Tools across 5 Pillars)
+## Hardened Core Tool Catalog
 
-| Pillar | Tools | Backend Implementation |
-| :--- | :--- | :--- |
-| **1. Telemetry & Power** | `system_health`, `power_profile` | `psutil` (CPU %, RAM GB/%, battery), `powerprofilesctl` |
-| **2. Hardware & Radios** | `toggle_wifi`, `toggle_bluetooth` | `nmcli radio wifi`, `rfkill` |
-| **3. Services & Daemons** | `service_status`, `restart_service` | `systemctl --user` (with strict security allowlisting) |
-| **4. Persistent Memory** | `memory_set`, `memory_get`, `memory_list`, `memory_delete` | SQLite WAL state engine at `~/.local/state/nanohat/state.db` |
-| **5. Scheduling & Housekeeping** | `task_add`, `task_list`, `task_cancel`, `get_datetime`, `calculator`, `empty_trash` | SQLite WAL tasks, Python AST math parser, `gio trash --empty` |
+The runtime is locked to 6 system administration tools strictly scoped to Linux operations:
+
+| Tool | Action Scope | Backend Command / Mechanism |
+| --- | --- | --- |
+| `system_health` | Query CPU %, RAM usage, or battery charge (`battery`, `ram`, `cpu`, `all`) | `psutil` virtual memory, CPU percent, battery sensors |
+| `power_profile` | Inspect or switch energy profiles (`power-saver`, `balanced`, `performance`) | `powerprofilesctl get` / `powerprofilesctl set <profile>` |
+| `toggle_wifi` | Check Wi-Fi state or toggle adapter power (`status`, `on`, `off`, `toggle`) | `nmcli radio wifi` |
+| `toggle_bluetooth` | Check Bluetooth power or toggle adapter state (`status`, `on`, `off`, `toggle`) | `bluetoothctl show` / `bluetoothctl power <state>` |
+| `service_status` | Inspect systemd unit states across user and system scopes | `systemctl --user is-active` / `systemctl is-active` |
+| `restart_service` | Restart allowlisted user-space daemons with Wayland protection | `systemctl --user restart <unit>.service` |
 
 ---
 
-## Quickstart & Installation
+## Installation & Setup
 
 ### 1. Prerequisites (Ollama)
-Pull the sub-300M FunctionGemma model:
+
+Ensure Ollama is running locally and pull the FunctionGemma model:
+
 ```bash
-ollama pull functiongemma
+ollama pull functiongemma:latest
+
 ```
 
 ### 2. Install NanoHat Globally
 
-#### Via Pipx (Recommended for CLI isolation):
+#### Via Pipx:
+
 ```bash
 pipx install git+https://github.com/aetherflow-bit/nanohat-v3.git@v3.1.0
+
 ```
 
-#### Or Local Development Install:
+#### Or Local Development:
+
 ```bash
 git clone https://github.com/aetherflow-bit/nanohat-v3.git
 cd nanohat-v3
 pip install -e .
+
 ```
 
 ---
 
 ## Usage Examples
 
-### Single-Shot Direct Execution
-Run any command directly from your terminal:
+Run commands directly from your terminal:
 
 ```bash
-# System Telemetry & Power
-nanohat "What is my current RAM and CPU usage?"
-nanohat "Check battery status"
-nanohat "Set power profile to power-saver"
+# Hardware Telemetry & Health Checks
+nanohat "How much battery do I have left?"
+nanohat "What's my current RAM usage?"
+nanohat "Check CPU load right now"
+nanohat "Show complete system health"
 
-# Hardware & Daemons
-nanohat "Is bluetooth on?"
-nanohat "Turn off wifi"
-nanohat "Status of pipewire"
-nanohat "Restart ollama"
+# Energy Profile Management
+nanohat "What power profile is currently active?"
+nanohat "Switch power profile to power-saver"
+nanohat "Set energy profile to performance"
 
-# Persistent Memory (Key-Value Store)
-nanohat "Remember my favorite editor is neovim"
-nanohat "What is my editor?"
-nanohat "List all my memories"
-nanohat "Forget my favorite editor"
+# Wireless Radio Control
+nanohat "Is Wi-Fi turned on?"
+nanohat "Turn off the Wi-Fi radio"
+nanohat "Check Bluetooth status"
+nanohat "Turn on Bluetooth"
 
-# Task Scheduling & Alerts
-nanohat "Remind me for coffee in 10 minutes"
-nanohat "List my pending tasks"
-nanohat "Cancel task 1"
+# Service Inspection & Daemon Recovery
+nanohat "Is pipewire running?"
+nanohat "Check status of ollama service"
+nanohat "What is the state of wireplumber?"
+nanohat "Restart pipewire service"
 
-# Utilities & Math
-nanohat "What time is it right now?"
-nanohat "What is 1024 * 768 / 16?"
-nanohat "Empty trash"
+# Symptom-Based Troubleshooting
+nanohat "My laptop feels super hot, check CPU usage"
+nanohat "Sound glitched out, restart the audio service pipewire"
+nanohat "I am low on charge, switch profile to power-saver"
+
 ```
 
-### Verbose Mode & Diagnostics
-Inspect the active tools, dynamic prompt, and raw model tool-calls in real-time:
+### Verbose Execution Diagnostics
+
+Inspect system prompts, parameter normalization, and raw tool calls:
+
 ```bash
-nanohat --verbose "Check RAM usage"
+nanohat --verbose "check battery status"
+
 ```
 
 ---
 
-## Project Architecture
+## Repository Structure
 
 ```text
-smollm2-fedora-agent/
+NanoHat/
 ├── runtime/
-│   ├── main.py          # Dual-mode CLI entrypoint & argument parser
-│   ├── router.py        # Regex intent classifier (dynamic tool gating)
-│   ├── prompts.py       # Dynamic system prompt assembler
-│   ├── tools.py         # OpenAI/Ollama compliant tool JSON schemas
-│   ├── engine.py        # Multi-step execution & tool dispatch orchestrator
-│   ├── functions.py     # Pure Python OS implementations & alias resolver
-│   ├── db.py            # SQLite WAL persistent state engine
-│   └── client.py        # Zero-dependency urllib Ollama API chat client
-├── pyproject.toml       # Modern packaging specification
+│   ├── main.py          # CLI entry point and argument parsing
+│   ├── engine.py        # Direct-dispatch orchestrator and argument normalizer
+│   ├── prompts.py       # Minimal system prompt with dynamic clock injection
+│   ├── tools.py         # 6-tool JSON schema definitions with enum constraints
+│   ├── functions.py     # Linux OS execution handlers (systemctl, nmcli, psutil)
+│   └── client.py        # Native Ollama API client
+├── tests/
+│   ├── conftest.py      # Subprocess safety interceptors (mocking destructive binaries)
+│   └── stress/          # Persona, colloquial, and security fuzzing test suites
+├── benchmarks/          # Latency and schema accuracy benchmarks
+├── pyproject.toml       # Build and dependency configuration
 ├── LICENSE              # Apache-2.0
 └── README.md
+
 ```
 
 ---
 
-## Security & Privacy Principles
+## Security & Fail-Closed Safeguards
 
-* **100% Offline & Private:** Zero external HTTP requests, zero telemetry, zero cloud API keys. Runs entirely on your local localhost Ollama server.
-* **No `eval()` Injections:** Mathematical expressions are parsed into an Abstract Syntax Tree (AST) with whitelist-only operators.
-* **Fail-Closed Destructive Gates:** Destructive operations (`empty_trash`) require interactive TTY confirmation.
-* **Concurrency-Safe State:** SQLite WAL mode ensures non-blocking concurrent reads and atomic writes across multiple terminal tabs.
+* **Wayland Crash Shield:** Rejection of desktop components (`gnome-shell`, `gdm`, `wayland`) inside `restart_service` prevents session termination.
+* **Allowlisted Daemon Control:** Service restarts are strictly limited to user-space utilities (`pipewire`, `wireplumber`, `xdg-desktop-portal`, `ollama`).
+* **Path Traversal Defense:** Sanitization on unit names blocks directory traversal attempts (`../`) and illegal path separators.
+* **Read-Only Question Guards:** Intercepts question queries like *"Is Wi-Fi on?"* to enforce read-only status calls without mutating radio state.
+* **Zero Cloud Leakage:** Executes entirely on localhost (`127.0.0.1:11434`) without external HTTP requests or network telemetry.
 
 ---
 
 ## License
+
 Licensed under the Apache License, Version 2.0.
