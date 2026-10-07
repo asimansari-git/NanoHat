@@ -65,7 +65,7 @@ reports_data.json
 dataset/
 
 # Obsidian Vault / Task Planning Artifacts
-.notes/
+.nanohat/
 
 
-.obsidian/
+dataset/

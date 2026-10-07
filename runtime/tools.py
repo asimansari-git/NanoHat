@@ -1,40 +1,22 @@
 """
-tools.py — Function calling declarations and JSON schemas for fuge-nanohat.
-Formatted according to the standard OpenAI / Ollama tool specification.
+tools.py - Hardened 6-tool catalog with negative constraints and strict parameter boundaries.
 """
-
-CALCULATOR_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "calculator",
-        "description": "Perform mathematical calculations and arithmetic expressions.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "expression": {
-                    "type": "string",
-                    "description": "The exact mathematical expression to evaluate (e.g. 7+7*18)."
-                }
-            },
-            "required": ["expression"]
-        }
-    }
-}
 
 SYSTEM_HEALTH_TOOL = {
     "type": "function",
     "function": {
         "name": "system_health",
-        "description": "Check Linux operating system metrics: RAM usage, CPU utilization, or battery status.",
+        "description": "Check Linux telemetry: CPU load/utilization percentage, RAM/memory usage, or battery level/percentage. Use for questions about how much battery, RAM, or CPU load remains.",
         "parameters": {
             "type": "object",
             "properties": {
                 "metric": {
                     "type": "string",
-                    "description": "Metric to query: Accepts 'ram' for RAM or memory usage, 'cpu' for CPU utilization, 'battery' for battery status, or 'all'. Defaults to 'all'."
+                    "enum": ["battery", "ram", "cpu", "all"],
+                    "description": "Specific telemetry metric: 'battery', 'ram', 'cpu', or 'all'."
                 }
             },
-            "required": []
+            "required": ["metric"]
         }
     }
 }
@@ -43,46 +25,22 @@ POWER_PROFILE_TOOL = {
     "type": "function",
     "function": {
         "name": "power_profile",
-        "description": "Get or set the Linux system power profile (power-saver, balanced, performance) using powerprofilesctl.",
+        "description": "Switch or inspect the system energy profile (power-saver, balanced, performance) using powerprofilesctl. Do NOT use for CPU load, RAM usage, or battery percentage.",
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "description": "Action: 'get' to view the active power profile, or 'set' to change it. Defaults to 'get'."
+                    "enum": ["get", "set"],
+                    "description": "Use 'get' to check active profile; use 'set' to switch profiles."
                 },
                 "profile": {
                     "type": "string",
-                    "description": "Target profile when action is 'set': 'power-saver', 'balanced', or 'performance'."
+                    "enum": ["power-saver", "balanced", "performance"],
+                    "description": "Required when action is 'set': 'power-saver', 'balanced', or 'performance'."
                 }
             },
             "required": ["action"]
-        }
-    }
-}
-
-GET_DATETIME_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "get_datetime",
-        "description": "Get current system date, time, day of the week, and timezone on Linux.",
-        "parameters": {
-            "type": "object",
-            "properties": {},
-            "required": []
-        }
-    }
-}
-
-EMPTY_TRASH_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "empty_trash",
-        "description": "Permanently empty and clear the user trash bin on Linux. Requires user confirmation.",
-        "parameters": {
-            "type": "object",
-            "properties": {},
-            "required": []
         }
     }
 }
@@ -91,16 +49,17 @@ TOGGLE_WIFI_TOOL = {
     "type": "function",
     "function": {
         "name": "toggle_wifi",
-        "description": "Check Wi-Fi radio status or turn Wi-Fi on, off, or toggle.",
+        "description": "Inspect or toggle Wi-Fi radio status via nmcli. For questions like 'Is Wi-Fi on?', state MUST be 'status'.",
         "parameters": {
             "type": "object",
             "properties": {
                 "state": {
                     "type": "string",
-                    "description": "Action: 'status' (to check status), 'on', 'off', or 'toggle'. Defaults to 'status'."
+                    "enum": ["status", "on", "off", "toggle"],
+                    "description": "'status' to inspect if enabled; 'on' to enable; 'off' to disable; 'toggle' to flip."
                 }
             },
-            "required": []
+            "required": ["state"]
         }
     }
 }
@@ -109,16 +68,17 @@ TOGGLE_BLUETOOTH_TOOL = {
     "type": "function",
     "function": {
         "name": "toggle_bluetooth",
-        "description": "Check Bluetooth radio status or turn Bluetooth on, off, or toggle.",
+        "description": "Inspect or toggle Bluetooth adapter status via bluetoothctl. For questions like 'Is Bluetooth on?', state MUST be 'status'.",
         "parameters": {
             "type": "object",
             "properties": {
                 "state": {
                     "type": "string",
-                    "description": "Action: 'status' (to check status), 'on', 'off', or 'toggle'. Defaults to 'status'."
+                    "enum": ["status", "on", "off", "toggle"],
+                    "description": "'status' to inspect if enabled; 'on' to enable; 'off' to disable; 'toggle' to flip."
                 }
             },
-            "required": []
+            "required": ["state"]
         }
     }
 }
@@ -127,13 +87,13 @@ SERVICE_STATUS_TOOL = {
     "type": "function",
     "function": {
         "name": "service_status",
-        "description": "Check the status or running state of a service, daemon, server, or program (e.g. ollama, pipewire, tailscale).",
+        "description": "Check if a systemd service or daemon is active, inactive, or failed (e.g. 'pipewire', 'wireplumber', 'ollama').",
         "parameters": {
             "type": "object",
             "properties": {
                 "service_name": {
                     "type": "string",
-                    "description": "Name of the service, daemon, or server to check (e.g. ollama, pipewire, tailscale)."
+                    "description": "Exact name of the service (e.g. 'pipewire', 'wireplumber', 'ollama')."
                 }
             },
             "required": ["service_name"]
@@ -151,7 +111,7 @@ RESTART_SERVICE_TOOL = {
             "properties": {
                 "service_name": {
                     "type": "string",
-                    "description": "Name of the service to restart (e.g. pipewire, wireplumber)."
+                    "description": "Name of the service to restart (e.g. 'pipewire', 'wireplumber')."
                 }
             },
             "required": ["service_name"]
@@ -159,173 +119,11 @@ RESTART_SERVICE_TOOL = {
     }
 }
 
-MEMORY_SET_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "memory_set",
-        "description": "Save a key-value memory, user preference, or note to persistent memory.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "key": {
-                    "type": "string",
-                    "description": "The memory key or topic label (e.g. 'editor', 'favorite_distro', 'pet_name')."
-                },
-                "value": {
-                    "type": "string",
-                    "description": "The value or information to remember (e.g. 'neovim', 'Fedora Workstation', 'Milo')."
-                }
-            },
-            "required": ["key", "value"]
-        }
-    }
-}
-
-MEMORY_GET_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "memory_get",
-        "description": "Retrieve stored user data, preferences, or notes from memory by key.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "key": {
-                    "type": "string",
-                    "description": "Key to look up in memory (e.g. 'editor', 'favorite_distro', 'pet_name')."
-                }
-            },
-            "required": ["key"]
-        }
-    }
-}
-
-MEMORY_LIST_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "memory_list",
-        "description": "List all stored user memories, preferences, and saved notes.",
-        "parameters": {
-            "type": "object",
-            "properties": {},
-            "required": []
-        }
-    }
-}
-
-MEMORY_DELETE_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "memory_delete",
-        "description": "Delete or forget a saved memory by key.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "key": {
-                    "type": "string",
-                    "description": "The key of the memory to delete."
-                }
-            },
-            "required": ["key"]
-        }
-    }
-}
-
-TASK_ADD_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "task_add",
-        "description": "Schedule a task, reminder, or to-do item with a title and optional due time.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "title": {
-                    "type": "string",
-                    "description": "The task title, alert, or reminder description."
-                },
-                "due_time": {
-                    "type": "string",
-                    "description": "When the task is due. Accepts seconds, minutes, hours, days, time, and date. Defaults to 'today'."
-                }
-            },
-            "required": ["title"]
-        }
-    }
-}
-
-TASK_LIST_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "task_list",
-        "description": "List scheduled tasks (filter by 'pending', 'completed', 'cancelled', or 'all').",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "status": {
-                    "type": "string",
-                    "description": "Status filter: 'pending', 'completed', 'cancelled', or 'all'. Defaults to 'pending'."
-                }
-            },
-            "required": []
-        }
-    }
-}
-
-TASK_CANCEL_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "task_cancel",
-        "description": "Cancel a scheduled task or reminder by its integer task ID.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "task_id": {
-                    "type": "integer",
-                    "description": "The integer ID of the task to be canceled or deleted."
-                }
-            },
-            "required": ["task_id"]
-        }
-    }
-}
-
-# Master tools catalog
-LAUNCH_APP_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "launch_app",
-        "description": "Launches a GUI application or desktop program on the system.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "app_name": {
-                    "type": "string",
-                    "description": "The exact name of the application or binary to launch (e.g., 'firefox', 'calc', 'gnome-terminal')."
-                }
-            },
-            "required": ["app_name"]
-        }
-    }
-}
-
 ALL_TOOLS = [
-    CALCULATOR_TOOL,
     SYSTEM_HEALTH_TOOL,
     POWER_PROFILE_TOOL,
-    GET_DATETIME_TOOL,
-    EMPTY_TRASH_TOOL,
     TOGGLE_WIFI_TOOL,
     TOGGLE_BLUETOOTH_TOOL,
     SERVICE_STATUS_TOOL,
     RESTART_SERVICE_TOOL,
-    MEMORY_SET_TOOL,
-    MEMORY_GET_TOOL,
-    MEMORY_LIST_TOOL,
-    MEMORY_DELETE_TOOL,
-    TASK_ADD_TOOL,
-    TASK_LIST_TOOL,
-    TASK_CANCEL_TOOL,
-    LAUNCH_APP_TOOL
 ]
-
-
-

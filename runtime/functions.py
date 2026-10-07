@@ -10,10 +10,7 @@ import re
 from typing import Any
 import psutil
 from typing import Any
-try:
-    from .db import get_connection, init_db
-except (ImportError, ValueError):
-    from db import get_connection, init_db
+
 
 _SAFE_OPERATORS = {
     ast.Add: operator.add,
@@ -155,37 +152,6 @@ def get_datetime() -> str:
     return now.strftime("%A, %B %d, %Y, %I:%M:%S %p %Z")
 
 
-def empty_trash() -> str:
-    """Permanently empties the user trash bin using gio trash --empty.
-    Guarded by interactive TTY check to prevent headless hangs.
-    """
-    gio_bin = shutil.which("gio")
-    if not gio_bin:
-        return "Error: gio binary not found on this system."
-
-    if not check_interactive_tty():
-        return "ERROR[aborted]: Destructive action 'empty_trash' requires an interactive TTY or NANOHAT_AUTO_APPROVE_DESTRUCTIVE=1."
-
-    if os.environ.get("NANOHAT_AUTO_APPROVE_DESTRUCTIVE") == "1":
-        try:
-            subprocess.run([gio_bin, "trash", "--empty"], capture_output=True, text=True, check=True)
-            return "Trash emptied successfully (auto-approved)."
-        except subprocess.CalledProcessError as e:
-            return f"Error emptying trash: {e.stderr.strip() or str(e)}"
-
-    try:
-        confirm = input("Permanently delete all items in trash? [y/N]: ").strip().lower()
-        if confirm in {"y", "yes"}:
-            subprocess.run([gio_bin, "trash", "--empty"], capture_output=True, text=True, check=True)
-            return "Trash emptied successfully."
-        else:
-            return "Trash emptying cancelled by user."
-    except (EOFError, KeyboardInterrupt):
-        return "Trash emptying aborted."
-    except subprocess.CalledProcessError as e:
-        return f"Error emptying trash: {e.stderr.strip() or str(e)}"
-
-
 def toggle_wifi(state: str = None, action: str = None) -> str:
     """Checks Wi-Fi status, turns Wi-Fi on or off, or toggles connection via nmcli."""
     target = (state or action or "status").strip().lower()
@@ -242,89 +208,6 @@ def toggle_bluetooth(state: str = None, action: str = None) -> str:
         return f"Error: Unsupported Bluetooth action '{target}'. Use 'on', 'off', 'toggle', or 'status'."
 
 
-def launch_app(app_name: str = None) -> str:
-    """Launches a GUI application securely, handling .desktop files, headless environments, and injection prevention."""
-    if not app_name or not isinstance(app_name, str):
-        return "ERROR: Invalid application name provided."
-
-    app_name = app_name.strip()
-
-    if not re.match(r'^[\w\-\.]+$', app_name):
-        return f"ERROR[security]: Invalid characters in app name '{app_name}'. Injection prevented."
-
-    if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
-        return f"ERROR[headless]: Cannot launch '{app_name}' without DISPLAY or WAYLAND_DISPLAY set."
-
-    APP_ALIASES = {
-        "calc": "gnome-calculator",
-        "calculator": "gnome-calculator",
-        "kcalc": "kcalc",
-        "vscode": "code",
-        "browser": "firefox",
-        "terminal": "gnome-terminal",
-        "files": "nautilus",
-        "file-manager": "nautilus",
-        "editor": "gedit",
-        "text-editor": "gnome-text-editor",
-        "music": "rhythmbox",
-        "player": "vlc",
-        "intellij": "idea",
-        "idea": "idea",
-        "slack": "slack",
-        "thunderbird": "thunderbird",
-    }
-    app_key = app_name.lower().strip()
-    target_bin = APP_ALIASES.get(app_key, app_name)
-    executable = shutil.which(target_bin) or shutil.which(app_name)
-    if not executable:
-        return f"ERROR[missing]: Application '{app_name}' not found."
-
-    try:
-        subprocess.Popen(
-            [executable],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            stdin=subprocess.DEVNULL,
-            start_new_session=True
-        )
-        return f"Successfully launched '{app_name}'."
-    except Exception as e:
-        return f"ERROR: Failed to launch '{app_name}': {e}"
-
-def service_status(service_name: str = None, name: str = None) -> str:
-    """Inspects whether a systemd user or system service is active, inactive, or failed."""
-    svc = (service_name or name or "").strip()
-    if not svc:
-        return "Error: Please specify the service name to inspect (e.g. 'pipewire', 'wireplumber')."
-
-    clean = os.path.basename(svc)
-    unit = clean if "." in clean else f"{clean}.service"
-
-    sys_bin = shutil.which("systemctl")
-    if not sys_bin:
-        return "Error: systemctl binary not found on this system."
-
-    # 1. Inspect user scope first
-    res = subprocess.run([sys_bin, "--user", "is-active", unit], capture_output=True, text=True)
-    status = res.stdout.strip()
-    if status == "active":
-        return f"Systemd user service '{unit}' status: active"
-
-    # 2. Inspect system scope (safe read-only)
-    sys_res = subprocess.run([sys_bin, "is-active", unit], capture_output=True, text=True)
-    sys_status = sys_res.stdout.strip()
-    if sys_status == "active":
-        return f"Systemd system service '{unit}' status: active"
-
-    # 3. Check daemon 'd' suffix (e.g. tailscale -> tailscaled.service)
-    if not clean.endswith("d"):
-        d_unit = f"{clean}d.service"
-        d_res = subprocess.run([sys_bin, "is-active", d_unit], capture_output=True, text=True)
-        if d_res.stdout.strip() == "active":
-            return f"Systemd system service '{d_unit}' status: active"
-
-    return f"Systemd service '{unit}' status: {status or sys_status or 'inactive'}"
-
 
 SAFE_RESTART_SERVICES = {
     "pipewire",
@@ -352,149 +235,58 @@ BLOCKED_WAYLAND_SERVICES = {
 }
 
 
-def restart_service(service_name: str = None, name: str = None) -> str:
-    """Restarts an allowlisted systemd user service.
-    Desktop shells and session managers are blocked to protect the Wayland desktop session.
-    """
-    svc = (service_name or name or "").strip().lower()
+def service_status(service_name: str = None, name: str = None, service: str = None, unit: str = None) -> str:
+    """Inspects whether a systemd user or system service is active, inactive, or failed."""
+    svc = (service_name or name or service or unit or "").strip()
     if not svc:
-        return "Error: Please specify the service name to restart (e.g. 'pipewire', 'wireplumber')."
-
-    if "/" in svc or "\\" in svc or ".." in svc:
-        return f"ERROR[security_blocked]: Path traversal or slashes in service name '{svc}' are strictly blocked."
-
+        return "Error: Please specify the service name to inspect (e.g. 'pipewire', 'wireplumber')."
     clean = os.path.basename(svc)
-    if clean in BLOCKED_WAYLAND_SERVICES:
-        return f"ERROR[security_blocked]: Restarting '{clean}' is strictly blocked to prevent Wayland desktop session crashes."
-
-    if clean not in SAFE_RESTART_SERVICES:
-        allowed = ", ".join(sorted(set(s.replace(".service", "") for s in SAFE_RESTART_SERVICES)))
-        return f"ERROR[security_blocked]: Service '{clean}' is not in the safe allowlist. Safe services: {allowed}"
-
-    unit = clean if "." in clean else f"{clean}.service"
+    target_unit = clean if "." in clean else f"{clean}.service"
     sys_bin = shutil.which("systemctl")
     if not sys_bin:
         return "Error: systemctl binary not found on this system."
 
+    res = subprocess.run([sys_bin, "--user", "is-active", target_unit], capture_output=True, text=True)
+    status = res.stdout.strip()
+    if status == "active":
+        return f"Systemd user service '{target_unit}' status: active"
+
+    sys_res = subprocess.run([sys_bin, "is-active", target_unit], capture_output=True, text=True)
+    sys_status = sys_res.stdout.strip()
+    if sys_status == "active":
+        return f"Systemd system service '{target_unit}' status: active"
+
+    if not clean.endswith("d"):
+        d_unit = f"{clean}d.service"
+        d_res = subprocess.run([sys_bin, "is-active", d_unit], capture_output=True, text=True)
+        if d_res.stdout.strip() == "active":
+            return f"Systemd system service '{d_unit}' status: active"
+
+    return f"Systemd service '{target_unit}' status: {status or sys_status or 'inactive'}"
+
+def restart_service(service_name: str = None, name: str = None, service: str = None, unit: str = None) -> str:
+    """Restarts an allowlisted systemd user service."""
+    svc = (service_name or name or service or unit or "").strip().lower()
+    if not svc:
+        return "Error: Please specify the service name to restart (e.g. 'pipewire', 'wireplumber')."
+    if "/" in svc or "\\" in svc or ".." in svc:
+        return f"ERROR[security_blocked]: Path traversal or slashes in service name '{svc}' are strictly blocked."
+    clean = os.path.basename(svc)
+    if clean in BLOCKED_WAYLAND_SERVICES:
+        return f"ERROR[security_blocked]: Restarting '{clean}' is strictly blocked to prevent Wayland desktop session crashes."
+    if clean not in SAFE_RESTART_SERVICES:
+        allowed = ", ".join(sorted(set(s.replace(".service", "") for s in SAFE_RESTART_SERVICES)))
+        return f"ERROR[security_blocked]: Service '{clean}' is not in the safe allowlist. Safe services: {allowed}"
+    
+    clean_unit = clean if "." in clean else f"{clean}.service"
+    sys_bin = shutil.which("systemctl")
+    if not sys_bin:
+        return "Error: systemctl binary not found on this system."
     try:
-        subprocess.run([sys_bin, "--user", "restart", unit], capture_output=True, text=True, check=True)
-        return f"Service '{unit}' restarted successfully."
+        subprocess.run([sys_bin, "--user", "restart", clean_unit], capture_output=True, text=True, check=True)
+        return f"Service '{clean_unit}' restarted successfully."
     except subprocess.CalledProcessError as e:
-        return f"Error restarting service '{unit}': {e.stderr.strip() or str(e)}"
-
-
-def _normalize_key(key: str) -> str:
-    """Normalizes key names: lowercases, trims, and collapses whitespace, dashes, and underscores."""
-    if not key:
-        return ""
-    k = key.strip().lower()
-    k = re.sub(r'[\s\-]+', '_', k)
-    k = re.sub(r'_+', '_', k)
-    return k.strip('_')
-
-
-def _match_key(stored_key: str, query_key: str) -> bool:
-    """Matches keys allowing for common prefixes, suffixes, and topic aliases (e.g. pet <-> pet_name)."""
-    s = _normalize_key(stored_key)
-    q = _normalize_key(query_key)
-    if s == q:
-        return True
-    if s == f"{q}_name" or f"{s}_name" == q:
-        return True
-    if s.endswith(f"_{q}") or q.endswith(f"_{s}"):
-        return True
-    if s.startswith(f"{q}_") or q.startswith(f"{s}_"):
-        return True
-    # Support pluralization / trailing 's'
-    if s == f"{q}s" or q == f"{s}s":
-        return True
-    return False
-
-
-def memory_set(key: str = None, value: str = None, name: str = None, content: str = None) -> str:
-    """Stores or updates a key-value pair in persistent user memory."""
-    raw_k = (key or name or "").strip()
-    v = (value or content or "").strip()
-    if not raw_k or not v:
-        return "Error: Both 'key' and 'value' are required to store a memory."
-    k = _normalize_key(raw_k)
-    init_db()
-    with get_connection() as conn:
-        conn.execute(
-            "INSERT INTO user_memory (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) "
-            "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP;",
-            (k, v)
-        )
-        conn.commit()
-    return f"Saved to memory: '{k}' = '{v}'"
-
-
-def memory_get(key: str = None, name: str = None) -> str:
-    """Retrieves a value from user memory by key."""
-    raw_k = (key or name or "").strip()
-    if not raw_k:
-        return "Error: Please specify the 'key' to retrieve."
-    k = _normalize_key(raw_k)
-    init_db()
-    with get_connection() as conn:
-        cursor = conn.execute("SELECT key, value FROM user_memory WHERE LOWER(key) = LOWER(?);", (k,))
-        row = cursor.fetchone()
-        if not row:
-            # Fallback scan: check if any existing key in DB normalizes to k
-            cursor = conn.execute("SELECT key, value FROM user_memory;")
-            all_rows = cursor.fetchall()
-            for r in all_rows:
-                if _normalize_key(r["key"]) == k:
-                    row = r
-                    break
-            # Smart topic fallback: check prefix, suffix, and _name variations (e.g. pet <-> pet_name)
-            if not row:
-                for r in all_rows:
-                    if _match_key(r["key"], k):
-                        row = r
-                        break
-        if row:
-            return f"{row['key']} is {row['value']}."
-        return f"No memory found for key '{k}'."
-
-
-def memory_list() -> str:
-    """Lists all stored keys and values in user memory."""
-    init_db()
-    with get_connection() as conn:
-        cursor = conn.execute("SELECT key, value FROM user_memory ORDER BY updated_at DESC;")
-        rows = cursor.fetchall()
-        if not rows:
-            return "User memory is currently empty."
-        lines = [f"- {row['key']}: {row['value']}" for row in rows]
-        return "User Memory:\n" + "\n".join(lines)
-
-
-def memory_delete(key: str = None, name: str = None) -> str:
-    """Deletes a key-value pair from user memory."""
-    raw_k = (key or name or "").strip()
-    if not raw_k:
-        return "Error: Please specify the 'key' to delete."
-    k = _normalize_key(raw_k)
-    init_db()
-    with get_connection() as conn:
-        cursor = conn.execute("DELETE FROM user_memory WHERE LOWER(key) = LOWER(?);", (k,))
-        conn.commit()
-        if cursor.rowcount > 0:
-            return f"Memory for key '{k}' deleted successfully."
-        # Fallback check for unnormalized existing keys
-        cursor = conn.execute("SELECT key FROM user_memory;")
-        target_key = None
-        for r in cursor.fetchall():
-            if _normalize_key(r["key"]) == k:
-                target_key = r["key"]
-                break
-        if target_key:
-            cursor = conn.execute("DELETE FROM user_memory WHERE key = ?;", (target_key,))
-            conn.commit()
-            if cursor.rowcount > 0:
-                return f"Memory for key '{target_key}' deleted successfully."
-        return f"No memory found for key '{k}' to delete."
+        return f"Error restarting service '{clean_unit}': {e.stderr.strip() or str(e)}"
 
 
 def task_add(title: str = None, due_time: str = None, task: str = None, time: str = None, notify_minutes_before: int = 0) -> str:
@@ -548,41 +340,19 @@ def task_cancel(task_id: Any = None, id: Any = None) -> str:
         return f"Task #{tid} not found."
 
 
-# Tool dispatch registry with sub-1B alias mapping
+# Tool dispatch registry (1:1 canonical mapping)
 REGISTRY = {
     "calculator": calculator,
     "system_health": system_health,
     "power_profile": power_profile,
     "get_datetime": get_datetime,
-    "empty_trash": empty_trash,
     "toggle_wifi": toggle_wifi,
     "toggle_bluetooth": toggle_bluetooth,
     "service_status": service_status,
     "restart_service": restart_service,
-    "memory_set": memory_set,
-    "memory_get": memory_get,
-    "memory_list": memory_list,
-    "memory_delete": memory_delete,
     "task_add": task_add,
     "task_list": task_list,
     "task_cancel": task_cancel,
-    "launch_app": launch_app,
-    # Direct Aliases to absorb sub-1B model hallucinations
-    "battery_level": system_health,
-    "battery_status": system_health,
-    "batterylevel": system_health,
-    "batterystatus": system_health,
-    "wifi_control": toggle_wifi,
-    "bluetooth_control": toggle_bluetooth,
-    "system_clock": get_datetime,
-    "set_memory": memory_set,
-    "get_memory": memory_get,
-    "list_memory": memory_list,
-    "delete_memory": memory_delete,
-    "add_task": task_add,
-    "list_tasks": task_list,
-    "cancel_task": task_cancel,
-    "set_reminder": task_add,
 }
 
 
