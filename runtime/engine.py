@@ -1,9 +1,10 @@
 """
-engine.py - Streamlined direct-dispatch engine with parameter normalization.
+engine.py - Pure Direct-Dispatch Runtime Engine for NanoHat v4.0.
+Decoupled from prompt-inspection heuristics; 100% driven by fine-tuned model tool calls.
 """
 import json
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 
 try:
     from runtime.client import OllamaClient
@@ -22,7 +23,19 @@ ARG_ALIASES = {
     "restart_service": {"service": "service_name", "unit": "service_name", "name": "service_name"},
     "toggle_wifi": {"action": "state"},
     "toggle_bluetooth": {"action": "state"},
+    "disk_usage": {"directory": "path", "folder": "path", "mount": "path"},
 }
+
+DEFAULT_ARG_FALLBACKS = {
+    "system_health": {"metric": "all"},
+    "power_profile": {"action": "get"},
+    "toggle_wifi": {"state": "status"},
+    "toggle_bluetooth": {"state": "status"},
+    "disk_usage": {"path": "/"},
+    "desktop_appearance": {"action": "status"},
+    "audio_control": {"action": "status"},
+}
+
 
 class AgentEngine:
     def __init__(
@@ -38,75 +51,29 @@ class AgentEngine:
         if self.verbose:
             print(f"[\033[94m{prefix}\033[0m] {message}")
 
-    def normalize_call(self, tool_name: str, args: Dict[str, Any], query: str = "") -> tuple[str, Dict[str, Any]]:
+    def normalize_call(self, tool_name: str, args: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
+        """
+        Pure schema normalization: maps parameter aliases and applies default fallbacks
+        if required parameters are omitted. Never inspects user prompt strings or keywords.
+        """
         if not isinstance(args, dict):
             args = {}
+
+        # 1. Parameter key alias remapping
         aliases = ARG_ALIASES.get(tool_name, {})
         normalized = {aliases.get(k, k): v for k, v in args.items()}
-        q_lower = query.lower()
 
-        # Catch power_profile misfires
-        if tool_name == "power_profile":
-            if any(w in q_lower for w in ["wifi", "wi-fi"]):
-                tool_name = "toggle_wifi"
-                is_question = bool(re.search(r"^(is|check|what|are)\b", q_lower.strip()))
-                normalized = {"state": "status" if is_question else ("off" if "off" in q_lower else "on")}
-            elif any(w in q_lower for w in ["bluetooth", "bt", "blue-teeth"]):
-                tool_name = "toggle_bluetooth"
-                is_question = bool(re.search(r"^(is|check|what|are)\b", q_lower.strip()))
-                normalized = {"state": "status" if is_question else ("off" if "off" in q_lower else "on")}
-            else:
-                is_telemetry = any(k in q_lower for k in ["cpu", "ram", "memory", "load", "hot", "temp", "usage"])
-                has_profile_kw = any(p in q_lower for p in ["profile", "performance", "power-saver", "powersaver", "saver", "balanced"])
-                if is_telemetry and not has_profile_kw:
-                    tool_name = "system_health"
-                    normalized = {"metric": "ram" if any(r in q_lower for r in ["ram", "memory"]) else "cpu"}
-
-        # Normalize system_health metrics
-        if tool_name == "system_health":
-            if "metric" not in normalized or normalized["metric"] not in ["battery", "ram", "cpu", "all"]:
-                if any(w in q_lower for w in ["battery", "batt", "juice", "charge"]):
-                    normalized["metric"] = "battery"
-                elif any(w in q_lower for w in ["ram", "memory", "swap"]):
-                    normalized["metric"] = "ram"
-                elif any(w in q_lower for w in ["cpu", "processor", "load"]):
-                    normalized["metric"] = "cpu"
-                else:
-                    normalized["metric"] = "all"
-
-        # Normalize power_profile actions and profiles
-        if tool_name == "power_profile":
-            if any(p in q_lower for p in ["power-saver", "powersaver", "saver", "save"]):
-                normalized["action"] = "set"
-                normalized["profile"] = "power-saver"
-            elif "performance" in q_lower:
-                normalized["action"] = "set"
-                normalized["profile"] = "performance"
-            elif "balanced" in q_lower:
-                normalized["action"] = "set"
-                normalized["profile"] = "balanced"
-            elif any(w in q_lower for w in ["active", "current", "what", "check", "get", "status"]):
-                normalized["action"] = "get"
-                normalized.pop("profile", None)
-
-        # Ensure question-form queries default to status
-        if tool_name in ["toggle_wifi", "toggle_bluetooth"]:
-            is_question = bool(re.search(r"^(is|check|what|are)\b", q_lower.strip()))
-            has_explicit_change = any(w in q_lower for w in ["turn on", "turn off", "switch on", "switch off", "disable", "enable"])
-            if is_question and not has_explicit_change:
-                normalized["state"] = "status"
-            elif "state" not in normalized:
-                if any(w in q_lower for w in ["off", "disable", "kill"]):
-                    normalized["state"] = "off"
-                elif any(w in q_lower for w in ["on", "enable"]):
-                    normalized["state"] = "on"
-                else:
-                    normalized["state"] = "status"
+        # 2. Sensible default fallback if required key is omitted
+        defaults = DEFAULT_ARG_FALLBACKS.get(tool_name, {})
+        for default_key, default_val in defaults.items():
+            if default_key not in normalized or normalized[default_key] is None:
+                normalized[default_key] = default_val
 
         return tool_name, normalized
 
-    def execute_tool(self, tool_name: str, arguments: Dict[str, Any], query: str = "") -> str:
-        actual_tool, clean_args = self.normalize_call(tool_name, arguments, query=query)
+    def execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> str:
+        """Executes a normalized tool call against the local Fedora execution registry."""
+        actual_tool, clean_args = self.normalize_call(tool_name, arguments)
         func = REGISTRY.get(actual_tool)
         if not func:
             err = f"Tool '{actual_tool}' not found in registry."
@@ -122,7 +89,56 @@ class AgentEngine:
             self._log("TOOL_ERROR", err)
             return err
 
+    def _extract_fallback_tool_calls(self, content: str) -> List[Dict[str, Any]]:
+        """
+        Catches tool calls when an SLM outputs raw <tool_call> tags inside message['content']
+        rather than through Ollama's structured tool_calls array.
+        """
+        if not content:
+            return []
+        extracted = []
+
+        # Find explicit <tool_call>{...}</tool_call> tags
+        for match in re.finditer(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", content, re.DOTALL):
+            try:
+                data = json.loads(match.group(1))
+                if isinstance(data, dict) and "name" in data:
+                    raw_args = data.get("arguments", data.get("parameters", {}))
+                    extracted.append({
+                        "function": {
+                            "name": data["name"],
+                            "arguments": raw_args if isinstance(raw_args, dict) else {},
+                        }
+                    })
+            except Exception:
+                continue
+
+        # If no explicit tags, check for isolated JSON block
+        if not extracted:
+            cleaned = content.strip()
+            if cleaned.startswith("{") and cleaned.endswith("}"):
+                try:
+                    data = json.loads(cleaned)
+                    if isinstance(data, dict) and "name" in data:
+                        raw_args = data.get("arguments", data.get("parameters", {}))
+                        extracted.append({
+                            "function": {
+                                "name": data["name"],
+                                "arguments": raw_args if isinstance(raw_args, dict) else {},
+                            }
+                        })
+                except Exception:
+                    pass
+
+        return extracted
+
     def run(self, user_query: str) -> str:
+        """
+        Primary execution entrypoint:
+        1. Submits system prompt + user query to Ollama client.
+        2. Dispatches structured tool calls directly to Fedora functions.
+        3. Returns plain-text responses directly for math, definitions, and chat.
+        """
         system_prompt = get_system_prompt()
         self._log("USER_PROMPT", user_query)
         self._log("SYSTEM_PROMPT", system_prompt)
@@ -136,29 +152,21 @@ class AgentEngine:
         message = response.get("message", {})
         tool_calls = message.get("tool_calls", [])
 
+        # Fallback to content extraction if Ollama didn't parse structured tool_calls
         if not tool_calls:
-            q_lower = user_query.lower()
-            if any(w in q_lower for w in ["battery", "batt", "juice"]):
-                output = self.execute_tool("system_health", {"metric": "battery"}, query=user_query)
-                self.history.append({"role": "user", "content": user_query})
-                self.history.append({"role": "tool", "name": "system_health", "content": output})
-                return output
+            tool_calls = self._extract_fallback_tool_calls(message.get("content", ""))
 
-            content = message.get("content", "").strip()
+        # Conversational / Math / Refusal / Plain-Text response (Zero tools emitted)
+        if not tool_calls:
+            content = (message.get("content") or "").strip()
+            # Clean think tags for final user presentation if model emitted them
+            clean_content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+            final_text = clean_content or content or "No operation was requested."
             self.history.append({"role": "user", "content": user_query})
-            self.history.append(message)
-            return content or "No operation was requested."
+            self.history.append({"role": "assistant", "content": final_text})
+            return final_text
 
-        # Filter out spurious radio co-invocations when query targets only one
-        if len(tool_calls) > 1:
-            q_low = user_query.lower()
-            has_wifi = any(w in q_low for w in ["wifi", "wi-fi"])
-            has_bt = any(w in q_low for w in ["bluetooth", "bt", "blue-teeth"])
-            if has_wifi and not has_bt:
-                tool_calls = [tc for tc in tool_calls if tc.get("function", {}).get("name") != "toggle_bluetooth"]
-            elif has_bt and not has_wifi:
-                tool_calls = [tc for tc in tool_calls if tc.get("function", {}).get("name") != "toggle_wifi"]
-
+        # Tool execution branch
         self.history.append({"role": "user", "content": user_query})
         self.history.append(message)
 
@@ -172,7 +180,7 @@ class AgentEngine:
                     args = json.loads(args)
                 except Exception:
                     args = {}
-            output = self.execute_tool(name, args, query=user_query)
+            output = self.execute_tool(name, args)
             outputs.append(output)
             self.history.append({"role": "tool", "name": name, "content": output})
 
