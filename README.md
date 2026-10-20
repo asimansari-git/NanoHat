@@ -1,179 +1,151 @@
-# 🎩 NanoHat v3.1.0: Autonomous Sub-300M Linux OS Copilot
+# NanoHat: Linux Fedora OS Agent
 
-> *"Fine-tuning is the last resort. First, try all methods of systems engineering."*
+> *"Local-first system control with zero cloud dependencies and verifiable safety."*
 
-**NanoHat** is an ultra-lightweight, offline autonomous Linux system copilot running on Fedora Workstation. Powered by **FunctionGemma 270M** and a zero-dependency Python runtime, NanoHat bridges the gap between natural language symptoms and low-level Linux administration. It diagnoses system health, controls hardware radios, manages power profiles, and recovers failed systemd user services without cloud dependencies, complex orchestration frameworks, or heavy router overhead.
+**NanoHat** is an ultra-lightweight, private, offline Linux system agent purpose-built for Fedora Workstation. Powered by the fine-tuned **NanoHat-0.6B** model (refined via Group Relative Policy Optimization on Linux OS operational directives) and an unbloated direct-dispatch Python runtime, NanoHat bridges the gap between colloquial natural language instructions and low-level Linux system calls.
 
----
-
-## Architecture: Direct-Dispatch vs. Cognitive Dilution
-
-In sub-1B parameter models like FunctionGemma 270M, traditional agent frameworks break down for two reasons:
-
-* **Context Dilution:** Large tool surfaces overload the model's limited attention window, resulting in parameter dropping and schema confusion.
-* **Synthesis Looping:** Re-prompting a 270M function-calling checkpoint with tool results to synthesize conversational dialogue leads to empty responses, conversational refusals, or infinite tool calls.
-
-NanoHat v3.1.0 bypasses routing layers and synthesis loops entirely. It presents a static, hardened catalog of 6 core system tools directly to the model and executes an immediate, deterministic dispatch:
-
-```mermaid
-flowchart TD
-    subgraph S1 ["1. Input & Entrypoint"]
-        Query["User Query\n'My sound glitched out, restart pipewire'"] --> CLI["nanohat CLI\n(runtime/main.py)"]
-    end
-
-    subgraph S2 ["2. Schema Constraints & Temporal Injection"]
-        CLI --> PromptGen["Base Prompt & Clock Grounding\n(runtime/prompts.py)\nInjects dynamic system timestamp"]
-        CLI --> Catalog["Hardened 6-Tool Catalog\n(runtime/tools.py)\nStrict enum & parameter constraints"]
-    end
-
-    subgraph S3 ["3. Single-Turn Tool Invocation"]
-        PromptGen --> Client["Ollama API Client\n(runtime/client.py)"]
-        Catalog --> Client
-        Client --> LLM["FunctionGemma 270M\nLocalhost Ollama | ~600MB active RAM"]
-        LLM -->|"Grammar-constrained control tokens"| ToolCall["tool_calls: restart_service(service_name='pipewire')"]
-    end
-
-    subgraph S4 ["4. Deterministic Execution & Output"]
-        ToolCall --> Engine["Agent Engine\n(runtime/engine.py)"]
-        Engine --> Normalizer["Defensive Argument Normalization\nAliases & Read/Write boundary guards"]
-        Normalizer --> Execution["Pure Python OS Backends\n(runtime/functions.py)\nsystemctl | powerprofilesctl | nmcli | psutil"]
-        Execution --> DirectOutput["Immediate Formatted Output\n(No LLM re-prompting)"]
-    end
-
-```
-
-* **Zero-Router Direct Dispatch:** Evaluates the entire 6-tool catalog directly within the model's native attention budget, eliminating routing drift and vector embedding overhead.
-* **Dynamic Temporal Grounding:** Injects the live host timestamp into the prompt on every turn, eliminating temporal hallucinations without consuming a tool slot.
-* **Deterministic Execution Loop:** Intercepts function calls and returns templated system output directly to the terminal, bypassing model re-prompting.
-* **Defensive Parameter Normalization:** Sanitizes argument aliases and isolates read-only telemetry queries from destructive actions.
+It diagnoses hardware telemetry, adjusts energy profiles, toggles wireless radios, controls audio and desktop appearances, audits disk storage, checks packages, and inspects systemd services—all running locally on your hardware at sub-second latencies with zero external network requests.
 
 ---
 
-## Hardened Core Tool Catalog
+## ⚡ What's New in v4.0
 
-The runtime is locked to 6 system administration tools strictly scoped to Linux operations:
+* **Policy Optimization Alignment (GRPO):** Upgraded from FunctionGemma-270M to Qwen3-0.6B, refined via Group Relative Policy Optimization (GRPO) with order-invariant multi-tool matching and read-only safety invariants.
+* **Expanded 10-Tool Catalog:** Added storage audits (`disk_usage`), package inspection (`package_manager`), audio sink control (`audio_control`), and GNOME theme switching (`desktop_appearance`).
+* **Preserved Foundation Reasoning:** 100% accuracy on complex arithmetic and general Linux conceptual questions without tool-hallucination regressions.
+* **Zero Heuristic Crutches:** Completely purged legacy keyword/regex inspection from the runtime harness; the model drives 100% of tool selection and argument generation natively.
+* **Instant Pre-Flight Diagnostics:** Auto-detects local Ollama daemon status and provides interactive 1-click model onboarding.
 
-| Tool | Action Scope | Backend Command / Mechanism |
-| --- | --- | --- |
-| `system_health` | Query CPU %, RAM usage, or battery charge (`battery`, `ram`, `cpu`, `all`) | `psutil` virtual memory, CPU percent, battery sensors |
-| `power_profile` | Inspect or switch energy profiles (`power-saver`, `balanced`, `performance`) | `powerprofilesctl get` / `powerprofilesctl set <profile>` |
+---
+
+## 📊 Benchmark Highlights (Unseen 299-Query Evaluation)
+
+Evaluated against 299 unseen test queries (239 system tool tasks + 60 conversational, arithmetic, and security refusal queries) under live Fedora hardware execution:
+
+| Evaluation Metric | Base (`think=OFF`) | Base (`think=ON`) | **NanoHat v4 (`think=OFF`)** | **NanoHat v4 (`think=ON`)** |
+| :--- | :---: | :---: | :---: | :---: |
+| **Overall Intent & Tool Accuracy** | 74.25% | 79.60% | **92.31%** | **95.65%** |
+| **Canonical Argument Match** | 63.88% | 69.57% | **88.29%** | **91.30%** |
+| **Single-Tool Execution Rate** | 74.16% | 80.38% | **97.61%** | **98.56%** |
+| **Multi-Tool Chain Success** | 23.33% | 36.67% | **46.67%** | **70.00%** |
+| **Sandbox Execution Safety Pass** | 73.64% | 82.01% | **99.58%** | **98.74%** |
+| **Math & General QA Preservation** | 70.00% | 70.00% | **80.00%** | **100.00%** |
+| **Duplicate Tool Hallucination Rate** | 0.84% | 0.84% | **0.00%** | **0.42%** |
+| **Median Latency (P50 on T4)** | 749 ms | 1667 ms | **682 ms** | **1970 ms** |
+
+> 🔗 *For deep-dive telemetry matrices, per-category breakdowns, and interactive latency curves, visit our official project documentation.*
+
+---
+
+## 🛠️ Hardened 10-Tool Core Catalog
+
+| Tool | Action Scope | Mechanism / Backend |
+| :--- | :--- | :--- |
+| `system_health` | Query CPU %, RAM usage, or battery charge (`battery`, `ram`, `cpu`, `all`) | `psutil` virtual memory, CPU percent, coretemp, UPower |
+| `power_profile` | Inspect or switch energy profiles (`power-saver`, `balanced`, `performance`) | `powerprofilesctl get` / `set` |
 | `toggle_wifi` | Check Wi-Fi state or toggle adapter power (`status`, `on`, `off`, `toggle`) | `nmcli radio wifi` |
-| `toggle_bluetooth` | Check Bluetooth power or toggle adapter state (`status`, `on`, `off`, `toggle`) | `bluetoothctl show` / `bluetoothctl power <state>` |
-| `service_status` | Inspect systemd unit states across user and system scopes | `systemctl --user is-active` / `systemctl is-active` |
-| `restart_service` | Restart allowlisted user-space daemons with Wayland protection | `systemctl --user restart <unit>.service` |
+| `toggle_bluetooth` | Check Bluetooth power or toggle adapter state (`status`, `on`, `off`, `toggle`) | `bluetoothctl show` / `power <state>` |
+| `service_status` | Inspect systemd unit states across user and system scopes | `systemctl is-active <unit>` |
+| `restart_service` | Restart allowlisted user-space daemons with Wayland crash protection | `systemctl --user restart <unit>.service` |
+| `disk_usage` | Inspect mounted filesystem storage and percentage full | `shutil.disk_usage` / `df` |
+| `package_manager` | Search repo metadata or verify if RPM/Flatpak packages are installed | `dnf`, `rpm -q`, `flatpak info` |
+| `audio_control` | Inspect or adjust default audio sink volume and mute state | `wpctl`, `pactl` |
+| `desktop_appearance` | Switch GNOME color-scheme (light/dark) or toggle Night Light | `gsettings` (`org.gnome.desktop.interface`) |
 
 ---
 
-## Installation & Setup
+## 🚀 Installation & Quickstart
 
 ### 1. Prerequisites (Ollama)
-
-Ensure Ollama is running locally and pull the FunctionGemma model:
-
+Ensure [Ollama](https://ollama.com) is installed and running on your local machine:
 ```bash
-ollama pull functiongemma:latest
+# Install Ollama (Linux)
+curl -fsSL https://ollama.com/install.sh | sh
 
+# Pull the NanoHat model weights (~700 MB)
+ollama pull asimansari-o/nanohat
 ```
 
-### 2. Install NanoHat Globally
+### 2. Install NanoHat CLI
 
-#### Via Pipx:
-
+#### Via PyPI (Recommended):
 ```bash
-pipx install git+https://github.com/aetherflow-bit/nanohat-v3.git@v3.1.0
+# Using pipx (recommended for isolated global CLI tools)
+pipx install nanohat
 
+# Using uv
+uv tool install nanohat
+# or into active environment: uv pip install nanohat
+
+# Using pip
+pip install nanohat
 ```
 
-#### Or Local Development:
-
+#### From Source (Development):
 ```bash
-git clone https://github.com/aetherflow-bit/nanohat-v3.git
-cd nanohat-v3
+git clone https://github.com/asimansari-git/NanoHat.git
+cd NanoHat
 pip install -e .
-
 ```
 
 ---
 
-## Usage Examples
+## 💡 Usage Examples
 
 Run commands directly from your terminal:
 
 ```bash
 # Hardware Telemetry & Health Checks
-nanohat "How much battery do I have left?"
-nanohat "What's my current RAM usage?"
-nanohat "Check CPU load right now"
+nanohat "What's my battery percentage?"
+nanohat "Check CPU load and temperature"
 nanohat "Show complete system health"
 
 # Energy Profile Management
-nanohat "What power profile is currently active?"
-nanohat "Switch power profile to power-saver"
-nanohat "Set energy profile to performance"
+nanohat "What is my current power profile?"
+nanohat "Switch energy profile to power-saver"
 
 # Wireless Radio Control
 nanohat "Is Wi-Fi turned on?"
-nanohat "Turn off the Wi-Fi radio"
-nanohat "Check Bluetooth status"
-nanohat "Turn on Bluetooth"
+nanohat "Turn off Bluetooth"
 
 # Service Inspection & Daemon Recovery
 nanohat "Is pipewire running?"
-nanohat "Check status of ollama service"
-nanohat "What is the state of wireplumber?"
-nanohat "Restart pipewire service"
+nanohat "Restart wireplumber service"
 
-# Symptom-Based Troubleshooting
-nanohat "My laptop feels super hot, check CPU usage"
-nanohat "Sound glitched out, restart the audio service pipewire"
-nanohat "I am low on charge, switch profile to power-saver"
+# Storage & Package Audits
+nanohat "Check my root disk usage"
+nanohat "Is brave-browser installed?"
+nanohat "Search for vlc in package repositories"
 
+# Desktop & Audio Control
+nanohat "Switch desktop to dark mode"
+nanohat "Mute audio volume"
+
+# Complex Cross-Domain Multi-Tool
+nanohat "What is my current power profile and what is my CPU usage?"
+
+# General Reasoning & Arithmetic (Zero Tool Dispatches)
+nanohat "What is 88 * 7 + 4 - 12 * 72?"
+nanohat "What is dnf?"
 ```
 
-### Verbose Execution Diagnostics
-
-Inspect system prompts, parameter normalization, and raw tool calls:
-
+### Verbose Mode
+Inspect prompt tokens, parameter normalization, and raw execution details:
 ```bash
-nanohat --verbose "check battery status"
-
+nanohat -v "Check battery charge"
 ```
 
 ---
 
-## Repository Structure
+## 🔒 Security & Read-Only Invariants
 
-```text
-NanoHat/
-├── runtime/
-│   ├── main.py          # CLI entry point and argument parsing
-│   ├── engine.py        # Direct-dispatch orchestrator and argument normalizer
-│   ├── prompts.py       # Minimal system prompt with dynamic clock injection
-│   ├── tools.py         # 6-tool JSON schema definitions with enum constraints
-│   ├── functions.py     # Linux OS execution handlers (systemctl, nmcli, psutil)
-│   └── client.py        # Native Ollama API client
-├── tests/
-│   ├── conftest.py      # Subprocess safety interceptors (mocking destructive binaries)
-│   └── stress/          # Persona, colloquial, and security fuzzing test suites
-├── benchmarks/          # Latency and schema accuracy benchmarks
-├── pyproject.toml       # Build and dependency configuration
-├── LICENSE              # Apache-2.0
-└── README.md
-
-```
+* **Read-Only Safety Invariant:** Informational inquiries (*"Is Wi-Fi on?"*, *"What power profile is active?"*) are mathematically rewarded to use strictly non-mutating parameters (`status`, `get`).
+* **Wayland Crash Shield:** Critical desktop components (`gnome-shell`, `gdm`, `wayland`) are rejected inside `restart_service` to prevent session termination.
+* **Allowlisted Daemon Recovery:** Service restarts are restricted strictly to user-space multimedia and agent utilities (`pipewire`, `wireplumber`, `ollama`).
+* **Dry-Run Sandbox:** Run with `--sandbox` (`NANOHAT_SANDBOX=1`) to perform live hardware reads while safely simulating any state-mutating actions.
+* **100% Offline Privacy:** Executes entirely on `http://127.0.0.1:11434` with zero telemetry, zero analytics, and zero external network access.
 
 ---
 
-## Security & Fail-Closed Safeguards
-
-* **Wayland Crash Shield:** Rejection of desktop components (`gnome-shell`, `gdm`, `wayland`) inside `restart_service` prevents session termination.
-* **Allowlisted Daemon Control:** Service restarts are strictly limited to user-space utilities (`pipewire`, `wireplumber`, `xdg-desktop-portal`, `ollama`).
-* **Path Traversal Defense:** Sanitization on unit names blocks directory traversal attempts (`../`) and illegal path separators.
-* **Read-Only Question Guards:** Intercepts question queries like *"Is Wi-Fi on?"* to enforce read-only status calls without mutating radio state.
-* **Zero Cloud Leakage:** Executes entirely on localhost (`127.0.0.1:11434`) without external HTTP requests or network telemetry.
-
----
-
-## License
-
-Licensed under the Apache License, Version 2.0.
+## 📜 License
+Licensed under the [Apache License, Version 2.0](LICENSE).
