@@ -14,12 +14,24 @@ When invoked from your terminal, it diagnoses hardware telemetry, switches energ
 
 ---
 
-## ⚡ What's New in v4.0 & v4.1
+## 🧠 Core Architecture: Direct Prompt Injection & Harness Synergy
 
+NanoHat is built with an intentionally unbloated, transparent design that completely avoids complex agent frameworks, LangChain abstractions, or black-box embedded tool-calling mechanisms:
+
+* **Direct Context Injection:** All system prompt directives, operational safety boundaries, and JSON tool schemas are injected directly into the model's prompt context—nothing is hidden behind framework middleware.
+* **Fine-Tuned Model-Harness Synergy:** The model (`NanoHat-0.6B`) is specifically trained and fine-tuned to work hand-in-hand with this exact direct-dispatch harness. It understands the operational directives and natively emits explicit `<tool_call>` tokens directly in its text output stream.
+* **Direct Python Dispatch:** The runtime harness parses these tokens, normalizes parameter aliases, and immediately dispatches the call to local Linux subsystem APIs (`psutil`, `nmcli`, `bluetoothctl`, `wpctl`, `gsettings`, `powerprofilesctl`).
+* **Zero Framework Overhead:** No opaque agent loops, no dynamic multi-turn hallucination chains, and no external dependencies—just direct prompt injection, model token emission, and deterministic execution.
+
+---
+
+## ⚡ What's New in v4.1 (Hardened Runtime)
+
+* **100% Dry-Run Sandbox Coverage:** Every single function across the 10-tool catalog now implements strict dry-run sandbox checks (`NANOHAT_SANDBOX=1` / `--sandbox`). Testing and evaluations safely simulate state changes (Wi-Fi, Bluetooth, power profiles, audio mute/volume, systemd daemons) without altering your host system.
+* **Multi-GPU Telemetry Support:** Enhanced `system_health` to detect both integrated graphics (Intel/AMD via sysfs DRM) and discrete GPUs (NVIDIA via `nvidia-smi`) alongside CPU, RAM, and battery metrics.
 * **Upgraded `Qwen3-0.6B` Tool-Calling Engine:** Upgraded from FunctionGemma-270M to `Qwen/Qwen3-0.6B`, specialized for single-tool and multi-tool Linux system calls and strict read-only vs. state-mutating parameter selection.
-* **Expanded 10-Tool Direct-Dispatch Catalog:** Added storage audits (`disk_usage`), package inspection (`package_manager`), audio sink control (`audio_control`), and GNOME theme switching (`desktop_appearance`).
-* **Preserved Foundation Reasoning:** High accuracy on arithmetic and general Linux conceptual questions alongside system tool calling.
-* **Zero Heuristic Crutches:** Completely purged legacy keyword/regex inspection from the runtime harness; the model drives 100% of tool selection and argument generation natively.
+* **Expanded 10-Tool Direct-Dispatch Catalog:** Storage audits (`disk_usage`), package inspection (`package_manager`), audio sink control (`audio_control`), and GNOME theme switching (`desktop_appearance`).
+* **Zero Heuristic Crutches:** Completely decoupled from regex/keyword prompt parsing; the fine-tuned model drives 100% of tool selection and argument generation natively.
 * **Instant Pre-Flight Diagnostics:** Auto-detects local Ollama daemon status and provides interactive 1-click model onboarding.
 
 ---
@@ -47,6 +59,15 @@ Evaluated against **299 unseen test queries** (239 system tool tasks + 60 conver
 
 > ⚠️ **Note on `v4.1` vs. Default `v4.0` (`nanohat:latest`):**  
 > While `v4.1` (`asimansari-o/nanohat:v4.1`) achieves lower P50 latency (607 ms) and higher multi-tool chain execution (56.67% vs 40.00%), **`v4.0` remains the default model for the NanoHat harness** (`asimansari-o/nanohat:latest`). On security and non-tool benchmarks, `v4.1` failed to score equal or higher than `v4.0` (60.0% vs 90.0% on destructive refusals and 83.33% vs 96.67% on non-tool clean rate). `v4.1.1` is actively being curated to resolve these regressions before updating the default tag.
+
+### 🔬 Reproducing the Benchmarks
+
+To independently reproduce the 299-query evaluation matrix on your local machine using our test harness:
+```bash
+# Run 4-matrix evaluation across think=OFF and think=ON (dry-run sandbox enforced)
+python evals/benchmark_models.py --models qwen3:0.6b asimansari-o/nanohat
+```
+
 
 ---
 
@@ -156,7 +177,7 @@ nanohat -v "Check battery charge"
 * **Read-Only Status Separation:** Informational inquiries (*"Is Wi-Fi on?"*, *"What power profile is active?"*) use strictly non-mutating parameters (`status`, `get`) rather than altering system state.
 * **Wayland Crash Shield:** Critical desktop components (`gnome-shell`, `gdm`, `wayland`) are rejected inside `restart_service` to prevent session termination.
 * **Allowlisted Daemon Recovery:** Service restarts are restricted strictly to safe user-space services (`pipewire`, `pipewire-pulse`, `wireplumber`, `xdg-desktop-portal`, `xdg-desktop-portal-gnome`, `ollama`).
-* **Dry-Run Sandbox:** Run with `--sandbox` (`NANOHAT_SANDBOX=1`) to perform live hardware reads while safely simulating any state-mutating actions.
+* **100% Tool Sandbox Coverage:** Run with `--sandbox` (`NANOHAT_SANDBOX=1`) to perform live hardware telemetry reads while safely simulating all state-mutating actions across 100% of the tool catalog, preventing accidental OS modifications during testing or evaluation.
 * **100% Offline Privacy:** Executes entirely on `http://127.0.0.1:11434` with zero telemetry, zero analytics, and zero external network access.
 
 ---

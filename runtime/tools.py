@@ -6,14 +6,14 @@ SYSTEM_HEALTH_TOOL = {
     "type": "function",
     "function": {
         "name": "system_health",
-        "description": "Check Linux hardware telemetry: CPU load percentage, RAM usage, or battery charge level.",
+        "description": "Check Linux hardware telemetry: CPU load percentage, GPU utilization & VRAM, RAM usage, or battery charge level.",
         "parameters": {
             "type": "object",
             "properties": {
                 "metric": {
                     "type": "string",
-                    "enum": ["battery", "ram", "cpu", "all"],
-                    "description": "Telemetry metric to inspect: 'battery', 'ram', 'cpu', or 'all'."
+                    "enum": ["battery", "ram", "cpu", "gpu", "all"],
+                    "description": "Telemetry metric to inspect: 'battery', 'ram', 'cpu', 'gpu', or 'all'."
                 }
             },
             "required": ["metric"]

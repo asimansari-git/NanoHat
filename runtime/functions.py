@@ -1,10 +1,13 @@
 """
-functions.py - Pure Python Linux OS execution backends for NanoHat v4.0 (Fedora Workstation).
+functions.py - Pure Python Linux OS execution backends for NanoHat v4.1 (Fedora Workstation).
+All 10 core tools implement deterministic dry-run sandboxing (NANOHAT_SANDBOX=1) to prevent
+unintended state modification during evaluation, CI, and test execution.
 """
 import os
 import re
 import shutil
 import subprocess
+from pathlib import Path
 from typing import Optional, Dict
 import psutil
 
@@ -23,11 +26,13 @@ def _is_sandbox() -> bool:
 # ---------------------------------------------------------------------------
 
 def system_health(metric: str = "all") -> str:
-    """Returns current Linux system telemetry: CPU percent (+ temp), RAM usage, and battery status."""
+    """Returns current Linux system telemetry: CPU percent (+ temp), dual/multi-GPU, RAM usage, and battery status."""
     try:
         metric_norm = (metric or "all").strip().lower()
 
         def _get_cpu_str() -> str:
+            if _is_sandbox():
+                return "CPU: 14% (42.0°C)"
             cpu = psutil.cpu_percent(interval=0.1)
             temps = psutil.sensors_temperatures() if hasattr(psutil, "sensors_temperatures") else {}
             for sensor_name in ("coretemp", "k10temp", "acpitz", "cpu_thermal"):
@@ -36,24 +41,88 @@ def system_health(metric: str = "all") -> str:
                     return f"CPU: {cpu}% ({current_temp:.1f}°C)"
             return f"CPU: {cpu}%"
 
+        def _get_gpu_str() -> str:
+            if _is_sandbox():
+                return "GPU 0 (Intel Integrated): Active | GPU 1 (NVIDIA GeForce): 14% (46°C), VRAM: 1.45GB / 8.00GB (18.1%)"
+            gpus = []
+            # 1. Check Integrated GPUs (Intel / AMD Radeon via sysfs drm cards)
+            drm_path = Path("/sys/class/drm")
+            if drm_path.exists():
+                for card in sorted(drm_path.glob("card[0-9]")):
+                    device_path = card / "device"
+                    vendor_path = device_path / "vendor"
+                    if vendor_path.exists():
+                        try:
+                            vendor_id = vendor_path.read_text().strip().lower()
+                            if "0x8086" in vendor_id:
+                                gpus.append("GPU 0 (Intel Integrated): Active")
+                            elif "0x1002" in vendor_id:
+                                gpus.append("GPU 0 (AMD Radeon iGPU): Active")
+                        except Exception:
+                            pass
+
+            # 2. Check Discrete NVIDIA GPUs via nvidia-smi
+            nvsmi = shutil.which("nvidia-smi")
+            if nvsmi:
+                try:
+                    res = subprocess.run(
+                        [
+                            nvsmi,
+                            "--query-gpu=name,utilization.gpu,temperature.gpu,memory.used,memory.total",
+                            "--format=csv,noheader,nounits",
+                        ],
+                        capture_output=True,
+                        text=True,
+                        timeout=5,
+                        env=_clean_env(),
+                    )
+                    if res.returncode == 0 and res.stdout.strip():
+                        for idx, line in enumerate(res.stdout.strip().splitlines(), 1):
+                            parts = [p.strip() for p in line.split(",")]
+                            if len(parts) >= 5:
+                                name, util, temp, used, total = parts[0], parts[1], parts[2], parts[3], parts[4]
+                                try:
+                                    used_gb = round(float(used) / 1024.0, 2)
+                                    tot_gb = round(float(total) / 1024.0, 2)
+                                    pct = round((float(used) / float(total)) * 100.0, 1) if float(total) > 0 else 0
+                                    gpus.append(f"GPU {idx} ({name}): {util}% ({temp}°C), VRAM: {used_gb}GB / {tot_gb}GB ({pct}%)")
+                                except Exception:
+                                    gpus.append(f"GPU {idx} ({name}): {util}% ({temp}°C), VRAM: {used}MB / {total}MB")
+                except Exception:
+                    pass
+
+            return " | ".join(gpus) if gpus else "GPU: No dedicated or discrete GPU detected"
+
         if "batt" in metric_norm:
+            if _is_sandbox():
+                return "Battery: 85% (discharging)"
             batt = psutil.sensors_battery()
             if not batt:
                 return "Battery: No battery detected"
             state = "charging" if batt.power_plugged else "discharging"
             return f"Battery: {int(round(batt.percent))}% ({state})"
 
+        if "gpu" in metric_norm:
+            return _get_gpu_str()
+
         if "cpu" in metric_norm:
             return _get_cpu_str()
 
         if "ram" in metric_norm or "mem" in metric_norm:
+            if _is_sandbox():
+                return "RAM: 3.20GB / 15.80GB (20.2%)"
             mem = psutil.virtual_memory()
             return f"RAM: {round(mem.used / (1024 ** 3), 2)}GB / {round(mem.total / (1024 ** 3), 2)}GB ({mem.percent}%)"
+
+        if _is_sandbox():
+            gpu_str = _get_gpu_str()
+            return f"CPU: 14% (42.0°C) | {gpu_str} | RAM: 3.20GB / 15.80GB (20.2%) | Battery: 85% (discharging)"
 
         mem = psutil.virtual_memory()
         batt = psutil.sensors_battery()
         batt_str = f"{int(round(batt.percent))}% ({'charging' if batt.power_plugged else 'discharging'})" if batt else "No battery detected"
-        return f"{_get_cpu_str()} | RAM: {round(mem.used / (1024 ** 3), 2)}GB / {round(mem.total / (1024 ** 3), 2)}GB ({mem.percent}%) | Battery: {batt_str}"
+        gpu_str = _get_gpu_str()
+        return f"{_get_cpu_str()} | {gpu_str} | RAM: {round(mem.used / (1024 ** 3), 2)}GB / {round(mem.total / (1024 ** 3), 2)}GB ({mem.percent}%) | Battery: {batt_str}"
     except Exception as e:
         return f"Error querying system health: {e}"
 
@@ -71,7 +140,7 @@ def power_profile(action: str = "get", profile: Optional[str] = None) -> str:
 
     action_norm = (action or "get").strip().lower()
     if action_norm in {"get", "status"} or (action_norm == "set" and not profile):
-        if not binary:
+        if _is_sandbox() or not binary:
             return "Current power profile: balanced"
         try:
             res = subprocess.run([binary, "get"], capture_output=True, text=True, check=True, env=_clean_env())
@@ -104,7 +173,7 @@ def toggle_wifi(state: Optional[str] = None, action: Optional[str] = None) -> st
 
     try:
         if target in {"status", "check", "get"}:
-            if not nmcli_bin:
+            if _is_sandbox() or not nmcli_bin:
                 return "Yes, Wi-Fi radio is enabled."
             res = subprocess.run([nmcli_bin, "radio", "wifi"], capture_output=True, text=True, env=_clean_env())
             enabled = res.stdout.strip() == "enabled"
@@ -137,7 +206,7 @@ def toggle_bluetooth(state: Optional[str] = None, action: Optional[str] = None) 
         return "Error: bluetoothctl binary not found on this system."
 
     def _is_powered() -> bool:
-        if not bt_bin:
+        if _is_sandbox() or not bt_bin:
             return True
         res = subprocess.run([bt_bin, "show"], capture_output=True, text=True, env=_clean_env())
         return "Powered: yes" in res.stdout
@@ -154,11 +223,12 @@ def toggle_bluetooth(state: Optional[str] = None, action: Optional[str] = None) 
                 subprocess.run([bt_bin, "power", "off"], capture_output=True, text=True, check=True, env=_clean_env())
             return "Bluetooth powered off."
         elif target in {"toggle", "flip"}:
+            if _is_sandbox():
+                return "Bluetooth toggled from powered on to off."
             powered = _is_powered()
             new_state = "off" if powered else "on"
-            if not _is_sandbox():
-                subprocess.run([bt_bin, "power", new_state], capture_output=True, text=True, check=True, env=_clean_env())
-            return f"Bluetooth toggled from {'on' if powered else 'off'} to {new_state}."
+            subprocess.run([bt_bin, "power", new_state], capture_output=True, text=True, check=True, env=_clean_env())
+            return f"Bluetooth power toggled to {new_state}."
         return f"Error: Unsupported Bluetooth action '{target}'."
     except subprocess.CalledProcessError as e:
         return f"Error managing Bluetooth adapter: {e.stderr.strip() or str(e)}"
@@ -190,6 +260,8 @@ def service_status(
         return "Error: Please specify the service name to inspect."
     clean = os.path.basename(svc)
     target_unit = clean if "." in clean else f"{clean}.service"
+    if _is_sandbox():
+        return f"Systemd service '{target_unit}' status: active"
     sys_bin = shutil.which("systemctl")
     if not sys_bin:
         return "Error: systemctl binary not found."
@@ -256,7 +328,7 @@ def audio_control(action: str = "status", level: Optional[int] = None) -> str:
     act = (action or "status").strip().lower()
     try:
         if act == "status":
-            if not wpctl:
+            if _is_sandbox() or not wpctl:
                 return "Audio sink status: Volume: 0.50"
             res = subprocess.run([wpctl, "get-volume", "@DEFAULT_AUDIO_SINK@"], capture_output=True, text=True, check=True, env=_clean_env())
             return f"Audio sink status: {res.stdout.strip()}"
@@ -296,6 +368,8 @@ def desktop_appearance(setting: str = "theme", value: str = "status") -> str:
         if target_setting == "theme":
             schema, key = "org.gnome.desktop.interface", "color-scheme"
             if val == "status":
+                if _is_sandbox():
+                    return f"GNOME {target_setting}: 'default'"
                 if not gsettings:
                     return "GNOME color-scheme: 'default'"
                 res = subprocess.run([gsettings, "get", schema, key], capture_output=True, text=True, check=True, env=_clean_env())
@@ -311,7 +385,7 @@ def desktop_appearance(setting: str = "theme", value: str = "status") -> str:
         elif target_setting == "night_light":
             schema, key = "org.gnome.settings-daemon.plugins.color", "night-light-enabled"
             if val == "status":
-                if not gsettings:
+                if _is_sandbox() or not gsettings:
                     return "GNOME Night Light enabled: false"
                 res = subprocess.run([gsettings, "get", schema, key], capture_output=True, text=True, check=True, env=_clean_env())
                 return f"GNOME Night Light enabled: {res.stdout.strip()}"
@@ -335,8 +409,12 @@ def disk_usage(path: str = "/") -> str:
     """Checks disk space usage on the specified mount point or directory."""
     target = (path or "/").strip()
     if not os.path.exists(target):
+        if _is_sandbox():
+            return f"Disk ({target}): 12.50GB used / 64.00GB total (51.50GB free, 19.5% full)"
         return f"Error: Path '{target}' does not exist."
     try:
+        if _is_sandbox():
+            return f"Disk ({target}): 12.50GB used / 64.00GB total (51.50GB free, 19.5% full)"
         usage = shutil.disk_usage(target)
         used_gb = round(usage.used / (1024 ** 3), 2)
         free_gb = round(usage.free / (1024 ** 3), 2)
@@ -367,6 +445,16 @@ def package_manager(action: str = "search", package_name: str = "", provider: st
     else:
         if not SAFE_PKG_PATTERN.match(pkg):
             return f"Error: Invalid package identifier '{pkg}'."
+
+    if _is_sandbox():
+        if act == "is_installed":
+            return f"RPM '{pkg}': installed (x86_64)"
+        elif act == "search":
+            return f"{pkg}.x86_64 : Primary package candidate for {pkg}\n{pkg}-devel.x86_64 : Development headers"
+        elif act == "install_cmd":
+            if prov == "flatpak":
+                return f"Ready to install via Flatpak. Run: flatpak install flathub {pkg}"
+            return f"Ready to install via DNF. Run: sudo dnf install -y {pkg}"
 
     try:
         if act == "is_installed":
@@ -405,7 +493,7 @@ def package_manager(action: str = "search", package_name: str = "", provider: st
         return f"Error querying package manager: {e}"
 
 # ---------------------------------------------------------------------------
-# 9. Tool Dispatch Registry
+# 9. Tool Dispatch Registry (Core 10 Tools)
 # ---------------------------------------------------------------------------
 
 REGISTRY = {
