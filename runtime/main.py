@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-main.py - CLI interface for NanoHat v4.1.2 (Linux Fedora OS Agent).
+main.py - CLI interface for NanoHat v4.1.3 (Linux Fedora OS Agent).
 """
 import argparse
 import os
@@ -14,7 +14,7 @@ except (ImportError, ModuleNotFoundError):
     try:
         from __init__ import __version__
     except (ImportError, ModuleNotFoundError):
-        __version__ = "4.1.2"
+        __version__ = "4.1.3"
     from client import OllamaClient, DEFAULT_HOST, DEFAULT_MODEL
     from engine import AgentEngine
 
@@ -58,7 +58,7 @@ def check_ollama_preflight(client: OllamaClient) -> None:
 def main():
     parser = argparse.ArgumentParser(
         prog="nanohat",
-        description="NanoHat v4.1.2 — Linux Fedora OS Agent",
+        description="NanoHat v4.1.3 — Linux Fedora OS Agent",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("query", nargs="*", type=str, help="User instruction or natural query")
