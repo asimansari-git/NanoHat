@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
 """
-main.py - CLI interface for NanoHat v4.1 (Linux Fedora OS Agent).
+main.py - CLI interface for NanoHat v4.1.3 (Linux Fedora OS Agent).
 """
 import argparse
 import os
 import sys
 
 try:
+    from runtime import __version__
     from runtime.client import OllamaClient, DEFAULT_HOST, DEFAULT_MODEL
     from runtime.engine import AgentEngine
 except (ImportError, ModuleNotFoundError):
+    try:
+        from __init__ import __version__
+    except (ImportError, ModuleNotFoundError):
+        __version__ = "4.1.3"
     from client import OllamaClient, DEFAULT_HOST, DEFAULT_MODEL
     from engine import AgentEngine
 
@@ -33,7 +38,7 @@ def check_ollama_preflight(client: OllamaClient) -> None:
         if not matched and available_models:
             print(
                 f"[\033[93m!\033[0m] Notice: Model '{target}' not found in local Ollama library.\n"
-                f"    To pull the recommended NanoHat v4 model:\n"
+                f"    To pull the recommended NanoHat v4.1.2 model:\n"
                 f"    \033[1mollama pull {target}\033[0m\n",
                 file=sys.stderr,
             )
@@ -42,7 +47,7 @@ def check_ollama_preflight(client: OllamaClient) -> None:
         if "connect" in err_msg or "refused" in err_msg or "failed to communicate" in err_msg:
             print(
                 f"[\033[91m!\033[0m] Error: Cannot connect to Ollama daemon at {client.host}.\n"
-                f"    NanoHat v4.0 requires an active Ollama instance for local, private Linux inference.\n\n"
+                f"    NanoHat v4.1.2 requires an active Ollama instance for local, private Linux inference.\n\n"
                 f"    To install Ollama:  curl -fsSL https://ollama.com/install.sh | sh\n"
                 f"    To start daemon:    systemctl start ollama   (or run 'ollama serve')\n",
                 file=sys.stderr,
@@ -53,8 +58,9 @@ def check_ollama_preflight(client: OllamaClient) -> None:
 def main():
     parser = argparse.ArgumentParser(
         prog="nanohat",
-        description="NanoHat v4.1 — Linux Fedora OS Agent",
+        description="NanoHat v4.1.3 — Linux Fedora OS Agent",
     )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("query", nargs="*", type=str, help="User instruction or natural query")
     parser.add_argument("--model", type=str, default=DEFAULT_MODEL, help=f"Ollama model tag (default: {DEFAULT_MODEL})")
     parser.add_argument("--host", type=str, default=DEFAULT_HOST, help="Ollama server URL (default: http://127.0.0.1:11434)")
