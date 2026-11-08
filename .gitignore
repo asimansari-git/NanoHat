@@ -62,10 +62,20 @@ grounding/*.json
 chaos_results.json
 gen_z_test_results.json
 reports_data.json
+evals/results/
+evals/*checkpoint*.json
 dataset/
 
 # Obsidian Vault / Task Planning Artifacts
 .nanohat/
 
+# Next Plan / Internal Staging (Excluded from Git)
+next_plan/
 
-dataset/
+# Sealed Intellectual Property & Research Drafts (Pre-Paper Publication)
+train/
+paper/
+docs/
+scratch/
+skills/
+runtime_v42_wip/

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-main.py - CLI interface for NanoHat v4.0 (Linux Fedora OS Agent).
+main.py - CLI interface for NanoHat v4.1 (Linux Fedora OS Agent).
 """
 import argparse
 import os
@@ -53,7 +53,7 @@ def check_ollama_preflight(client: OllamaClient) -> None:
 def main():
     parser = argparse.ArgumentParser(
         prog="nanohat",
-        description="NanoHat v4.0 — Linux Fedora OS Agent",
+        description="NanoHat v4.1 — Linux Fedora OS Agent",
     )
     parser.add_argument("query", nargs="*", type=str, help="User instruction or natural query")
     parser.add_argument("--model", type=str, default=DEFAULT_MODEL, help=f"Ollama model tag (default: {DEFAULT_MODEL})")
