@@ -1,6 +1,6 @@
 # NanoHat: Linux Fedora OS Agent
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23618506.svg)](https://doi.org/10.5281/zenodo.23618506)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23618505.svg)](https://doi.org/10.5281/zenodo.23618505)
 
 > *"Local-first, on-demand system control with zero cloud dependencies and verifiable safety."*
 
@@ -8,7 +8,7 @@
 
 When invoked from your terminal, it diagnoses hardware telemetry (CPU, RAM, battery, and Intel/AMD/NVIDIA GPUs), switches energy profiles, toggles wireless radios, controls audio and desktop themes, audits disk storage, checks packages, and inspects systemd services—running locally on your hardware at sub-second latencies with zero external network requests.
 
-* **Research Paper (Preprint):** [10.5281/zenodo.23618506](https://doi.org/10.5281/zenodo.23618506)
+* **Research Paper (Preprint):** [10.5281/zenodo.23618505](https://doi.org/10.5281/zenodo.23618505)
 * **Ollama Model Registry:** [`asimansari-o/nanohat`](https://ollama.com/asimansari-o/nanohat) (`v4.1.2` / `latest`)
 * **Hugging Face Weights:** [`blackpirates/nanohat-qwen3-0.6b-final`](https://huggingface.co/blackpirates/nanohat-qwen3-0.6b-final)
 
@@ -201,13 +201,13 @@ If you use NanoHat or the NanoHat-0.6B models in your research, please cite our 
   author={Ansari, Asim},
   year={2026},
   journal={Zenodo Preprint},
-  doi={10.5281/zenodo.23618506},
-  url={https://doi.org/10.5281/zenodo.23618506}
+  doi={10.5281/zenodo.23618505},
+  url={https://doi.org/10.5281/zenodo.23618505}
 }
 ```
 
 ```text
-Ansari, A. (2026). NanoHat: Polarity-Safe Reinforcement Fine-Tuning and Execution-Grounded Alignment for Sub-1B Local Linux OS Agents (Version 1.0.0). Zenodo. https://doi.org/10.5281/zenodo.23618506
+Ansari, A. (2026). NanoHat: Polarity-Safe Reinforcement Fine-Tuning and Execution-Grounded Alignment for Sub-1B Local Linux OS Agents. Zenodo. https://doi.org/10.5281/zenodo.23618505
 ```
 
 ---

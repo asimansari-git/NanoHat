@@ -79,3 +79,7 @@ docs/
 scratch/
 skills/
 runtime_v42_wip/
+
+# PyPI-only README & local training artifacts
+PYPI_README.md
+file-from-previous-trainings/

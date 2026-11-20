@@ -153,6 +153,14 @@ class TestNanoHatV41Runtime(unittest.TestCase):
         out = self.engine.execute_tool("toggle_bluetooth", {"action": "off"})
         self.assertIn("powered off", out)
 
+        # Fallback & execution for desktop_appearance (must not inject 'action')
+        tool, args = self.engine.normalize_call("desktop_appearance", {})
+        self.assertEqual(args, {"setting": "theme", "value": "status"})
+        theme_out = self.engine.execute_tool("desktop_appearance", {"setting": "theme", "value": "light"})
+        self.assertIn("Light mode", theme_out)
+        status_out = self.engine.execute_tool("desktop_appearance", {"setting": "theme", "value": "status"})
+        self.assertIn("GNOME theme:", status_out)
+
     def test_fallback_tool_call_tag_extraction(self):
         """Test extraction of <tool_call> tags embedded in plain-text output."""
         raw_text = "Checking status... <tool_call>{\"name\": \"toggle_wifi\", \"arguments\": {\"state\": \"status\"}}</tool_call>"

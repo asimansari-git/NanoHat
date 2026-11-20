@@ -32,7 +32,7 @@ DEFAULT_ARG_FALLBACKS = {
     "toggle_wifi": {"state": "status"},
     "toggle_bluetooth": {"state": "status"},
     "disk_usage": {"path": "/"},
-    "desktop_appearance": {"action": "status"},
+    "desktop_appearance": {"setting": "theme", "value": "status"},
     "audio_control": {"action": "status"},
 }
 
@@ -141,7 +141,7 @@ class AgentEngine:
         """
         system_prompt = get_system_prompt()
         self._log("USER_PROMPT", user_query)
-        self._log("SYSTEM_PROMPT", system_prompt)
+        # self._log("SYSTEM_PROMPT", system_prompt)
 
         messages = [
             {"role": "system", "content": system_prompt},

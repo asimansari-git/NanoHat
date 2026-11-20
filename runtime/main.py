@@ -83,7 +83,10 @@ def main():
 
     try:
         result = engine.run(user_query)
-        print(result)
+        if args.verbose:
+            print("[\033[94mNanoHat\033[0m]\n" + result)
+        else:
+            print(result)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
