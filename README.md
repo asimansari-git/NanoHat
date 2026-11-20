@@ -8,7 +8,6 @@
 
 When invoked from your terminal, it diagnoses hardware telemetry (CPU, RAM, battery, and Intel/AMD/NVIDIA GPUs), switches energy profiles, toggles wireless radios, controls audio and desktop themes, audits disk storage, checks packages, and inspects systemd services—running locally on your hardware at sub-second latencies with zero external network requests.
 
-* **Research Paper (Preprint):** [10.5281/zenodo.23618505](https://doi.org/10.5281/zenodo.23618505)
 * **Ollama Model Registry:** [`asimansari-o/nanohat`](https://ollama.com/asimansari-o/nanohat) (`v4.1.2` / `latest`)
 * **Hugging Face Weights:** [`blackpirates/nanohat-qwen3-0.6b-final`](https://huggingface.co/blackpirates/nanohat-qwen3-0.6b-final)
 
