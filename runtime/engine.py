@@ -141,7 +141,7 @@ class AgentEngine:
         """
         system_prompt = get_system_prompt()
         self._log("USER_PROMPT", user_query)
-        self._log("SYSTEM_PROMPT", system_prompt)
+        # self._log("SYSTEM_PROMPT", system_prompt)
 
         messages = [
             {"role": "system", "content": system_prompt},
