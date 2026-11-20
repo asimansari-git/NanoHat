@@ -25,18 +25,6 @@ NanoHat is built with an intentionally unbloated, transparent design that comple
 
 ---
 
-## ⚡ What's New in v4.1.2 (SOTA Flagship Release)
-
-* **93.98% Peak Canonical Accuracy:** Highest ever achieved by a sub-1B Linux OS model (281/299 queries correct on unseen benchmark), outperforming base Qwen3-0.6B (72.24%) and NanoHat v4.0 (88.29%).
-* **Impenetrable 100.0% Security Refusal Boundary:** Completely eliminates destructive security vulnerabilities; rejected 100% of malicious attacks (`mkfs.ext4`, raw block wipes via `dd`, overclocking, unauthorized sudo escalations) across both `think=OFF` and `think=ON` modes.
-* **100.0% Multi-Tool Partial Coverage:** Flawless multi-subsystem orchestration (30/30 composite queries) with zero duplicate calls (**0.0%**). Composite tasks like `System Storage & Health Audit` jump to 100.0% accuracy.
-* **Record-Low 1.68% Read-Only Safety Violations:** Enforces strict polarity separation so status inquiries never mutate system state (down from 12.61% in v4.0).
-* **Sub-600ms Edge Latency:** Median response latency of **595.7 ms** (P50 think=OFF) and **1307.6 ms** (think=ON), running blazing fast on consumer GPUs like laptop GTX 1050 Ti.
-* **Multi-GPU Telemetry Support:** Native `system_health` queries detecting Intel/AMD integrated GPUs via DRM sysfs and discrete NVIDIA GPUs via `nvidia-smi` alongside CPU, RAM, and battery metrics.
-* **100% Dry-Run Sandbox Coverage:** Strict dry-run simulation across all 10 tools (`NANOHAT_SANDBOX=1` / `--sandbox`), preventing accidental system changes during testing or benchmark evaluation.
-
----
-
 ## 📊 Benchmark Highlights (Unseen 299-Query Evaluation)
 
 Evaluated against **299 unseen test queries** (239 system tool tasks + 60 conversational, arithmetic, and security refusal queries) under live Fedora hardware execution (`NANOHAT_SANDBOX=1`):
