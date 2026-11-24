@@ -26,8 +26,7 @@ NanoHat is built with an intentionally unbloated, transparent design that comple
 
 ## 📊 Benchmark Highlights (Unseen 299-Query Evaluation)
 
-Evaluated against **299 unseen test queries** (239 system tool tasks + 60 conversational, arithmetic, and security refusal queries) under live Fedora hardware execution (`NANOHAT_SANDBOX=1`):
-
+Evaluated against **299 unseen test queries** (239 system tool tasks + 60 conversational, arithmetic, and security refusal queries) with Ollama inference running on a **Google Colab T4 GPU** and sandboxed tool execution (`NANOHAT_SANDBOX=1`):
 | Evaluation Metric | Base Qwen3-0.6B (`think=OFF`) | Base Qwen3-0.6B (`think=ON`) | NanoHat v4.0 (`think=OFF`) | NanoHat v4.1 (`think=OFF`) | NanoHat v4.1.2 (`think=OFF`) | NanoHat v4.1.2 (`think=ON`) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Exact Tool Match Rate (239 Tool Queries)** | 66.95% | 76.99% | 90.38% | 92.47% | 92.89% | **96.65%** |
