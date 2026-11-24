@@ -19,6 +19,7 @@ NanoHat is built with an intentionally unbloated, transparent design that comple
 
 * **Direct Context Injection:** All system prompt directives, operational safety boundaries, and JSON tool schemas are injected directly into the model's prompt context—nothing is hidden behind framework middleware.
 * **Fine-Tuned Model-Harness Synergy:** The model (`NanoHat-0.6B`) is specifically trained and fine-tuned to work hand-in-hand with this exact direct-dispatch harness. It understands the operational directives and natively emits explicit `<tool_call>` tokens directly in its text output stream.
+* **Training Infrastructure:** Supervised fine-tuning (SFT) and GRPO reinforcement alignment were trained on Google Colab L4 and A100 GPUs.
 * **Direct Python Dispatch:** The runtime harness parses these tokens, normalizes parameter aliases, and immediately dispatches the call to local Linux subsystem APIs (`psutil`, `nmcli`, `bluetoothctl`, `wpctl`, `gsettings`, `powerprofilesctl`).
 * **Zero Framework Overhead:** No opaque agent loops, no dynamic multi-turn hallucination chains, and no external dependencies—just direct prompt injection, model token emission, and deterministic execution.
 
